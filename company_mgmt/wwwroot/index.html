@@ -1,0 +1,173 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Employee OData Query</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 24px;
+        }
+
+        .row {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: inline-block;
+            width: 120px;
+            vertical-align: top;
+        }
+
+        input, button {
+            padding: 8px;
+            margin: 4px 0;
+            font-size: 14px;
+        }
+
+        input {
+            width: 420px;
+        }
+
+        #top, #skip {
+            width: 120px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #999;
+            padding: 8px;
+            text-align: left;
+        }
+
+        #urlPreview {
+            margin-top: 16px;
+            padding: 10px;
+            background: #f5f5f5;
+            word-break: break-all;
+            border: 1px solid #ccc;
+            font-family: Consolas, monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h2>Employee OData Query</h2>
+
+    <div class="row">
+        <label for="filter">$filter:</label>
+        <input id="filter" type="text" value="Salary ge 70000" />
+    </div>
+
+    <div class="row">
+        <label for="select">$select:</label>
+        <input id="select" type="text" value="Name,Email,Salary" />
+    </div>
+
+    <div class="row">
+        <label for="orderby">$orderby:</label>
+        <input id="orderby" type="text" value="Salary desc" />
+    </div>
+
+    <div class="row">
+        <label for="top">$top:</label>
+        <input id="top" type="number" value="5" />
+    </div>
+
+    <div class="row">
+        <label for="skip">$skip:</label>
+        <input id="skip" type="number" value="0" />
+    </div>
+
+    <button id="runBtn">Run Query</button>
+
+    <div id="urlPreview"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Salary</th>
+            </tr>
+        </thead>
+        <tbody id="results"></tbody>
+    </table>
+
+    <script>
+        const baseUrl = "http://localhost:5197/odata/Employees";
+
+        function buildQuery() {
+            const params = new URLSearchParams();
+
+            const filter = document.getElementById("filter").value.trim();
+            const select = document.getElementById("select").value.trim();
+            const orderby = document.getElementById("orderby").value.trim();
+            const top = document.getElementById("top").value.trim();
+            const skip = document.getElementById("skip").value.trim();
+
+            if (filter) params.append("$filter", filter);
+            if (select) params.append("$select", select);
+            if (orderby) params.append("$orderby", orderby);
+            if (top) params.append("$top", top);
+            if (skip) params.append("$skip", skip);
+
+            return params.toString();
+        }
+
+        function showUrl() {
+            const query = buildQuery();
+            const url = query ? `${baseUrl}?${query}` : baseUrl;
+            document.getElementById("urlPreview").textContent = url;
+            return url;
+        }
+
+        async function loadEmployees() {
+            const url = showUrl();
+
+            try {
+                const response = await fetch(url, {
+                    headers: { "Accept": "application/json" }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const items = data.value || [];
+                const tbody = document.getElementById("results");
+                tbody.innerHTML = "";
+
+                if (!items.length) {
+                    tbody.innerHTML = "<tr><td colspan='3'>No records found</td></tr>";
+                    return;
+                }
+
+                items.forEach(item => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                <td>${item.Name ?? ""}</td>
+                <td>${item.Email ?? ""}</td>
+                <td>${item.Salary ?? ""}</td>
+              `;
+                    tbody.appendChild(row);
+                });
+
+            } catch (err) {
+                document.getElementById("results").innerHTML =
+                    `<tr><td colspan="3">Error: ${err.message}</td></tr>`;
+            }
+        }
+
+        document.getElementById("runBtn").addEventListener("click", loadEmployees);
+        showUrl();
+        loadEmployees();
+    </script>
+</body>
+</html>
