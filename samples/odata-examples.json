@@ -1,0 +1,81 @@
+{
+  "$select": {
+    "request": "GET /odata/Employees?$select=Name,Email,Salary",
+    "response": {
+      "@odata.context": "$metadata#Employees(Name,Email,Salary)",
+      "value": [
+        {
+          "Name": "Lynn Matthew",
+          "Email": "lynn@company.com",
+          "Salary": 60000
+        },
+        {
+          "Name": "John Smith",
+          "Email": "john@company.com",
+          "Salary": 75000
+        }
+      ]
+    }
+  },
+  "$filter": {
+    "request": "GET /odata/Employees?$filter=Salary ge 70000",
+    "response": {
+      "@odata.context": "$metadata#Employees",
+      "value": [
+        {
+          "Id": 2,
+          "Name": "John Smith",
+          "Email": "john@company.com",
+          "Salary": 75000,
+          "BranchId": 2
+        },
+        {
+          "Id": 3,
+          "Name": "Sarah Wilson",
+          "Email": "sarah@company.com",
+          "Salary": 85000,
+          "BranchId": 2
+        }
+      ]
+    }
+  },
+  "$orderby": {
+    "request": "GET /odata/Products?$orderby=Price desc",
+    "response": {
+      "@odata.context": "$metadata#Products",
+      "value": [
+        { "Id": 1, "Name": "Laptop", "Price": 70000, "BranchId": 1 },
+        { "Id": 2, "Name": "Keyboard", "Price": 2500, "BranchId": 2 },
+        { "Id": 3, "Name": "Mouse", "Price": 1200, "BranchId": 1 }
+      ]
+    }
+  },
+  "$top": {
+    "request": "GET /odata/Employees?$top=2",
+    "response": {
+      "@odata.context": "$metadata#Employees",
+      "value": [
+        { "Id": 1, "Name": "Lynn Matthew", "Email": "lynn@company.com", "Salary": 60000, "BranchId": 1 },
+        { "Id": 2, "Name": "John Smith", "Email": "john@company.com", "Salary": 75000, "BranchId": 2 }
+      ]
+    }
+  },
+  "$skip": {
+    "request": "GET /odata/Employees?$orderby=Id&$skip=1",
+    "response": {
+      "@odata.context": "$metadata#Employees",
+      "value": [
+        { "Id": 2, "Name": "John Smith", "Email": "john@company.com", "Salary": 75000, "BranchId": 2 },
+        { "Id": 3, "Name": "Sarah Wilson", "Email": "sarah@company.com", "Salary": 85000, "BranchId": 2 }
+      ]
+    }
+  },
+  "$skiptoken": {
+    "request": "GET /odata/Employees?$skiptoken=server-generated-token",
+    "note": "Use the token from an OData @odata.nextLink. The token is service-generated and is not a fixed sample value.",
+    "response": {
+      "@odata.context": "$metadata#Employees",
+      "value": []
+    }
+  }
+}

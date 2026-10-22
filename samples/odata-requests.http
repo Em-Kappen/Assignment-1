@@ -1,0 +1,35 @@
+@baseUrl = http://localhost:5197
+@skipToken = replace-with-token-from-odata-nextLink
+
+### $select - return only selected employee fields
+GET {{baseUrl}}/odata/Employees?$select=Name,Email,Salary
+Accept: application/json
+
+### $filter - return employees whose salary is at least 70000
+GET {{baseUrl}}/odata/Employees?$filter=Salary%20ge%2070000
+Accept: application/json
+
+### $orderby - sort products from most expensive to least expensive
+GET {{baseUrl}}/odata/Products?$orderby=Price%20desc
+Accept: application/json
+
+### $top - limit the number of returned records
+GET {{baseUrl}}/odata/Employees?$top=2
+Accept: application/json
+
+### $skip - skip the first record
+GET {{baseUrl}}/odata/Employees?$orderby=Id&$skip=1
+Accept: application/json
+
+### $skiptoken - continue from a server-generated OData nextLink
+# Use the complete nextLink returned by the service, rather than this placeholder.
+GET {{baseUrl}}/odata/Employees?$skiptoken={{skipToken}}
+Accept: application/json
+
+### Combined options
+GET {{baseUrl}}/odata/Employees?$filter=Salary%20ge%2070000&$select=Name,Email,Salary&$orderby=Salary%20desc&$skip=0&$top=2
+Accept: application/json
+
+### Entity lookup
+GET {{baseUrl}}/odata/Branches(1)
+Accept: application/json
