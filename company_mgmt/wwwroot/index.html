@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>Employee OData Query</title>
+    <title>Company OData Query</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -19,7 +19,7 @@
             vertical-align: top;
         }
 
-        input, button {
+        input, select, button {
             padding: 8px;
             margin: 4px 0;
             font-size: 14px;
@@ -49,15 +49,24 @@
             margin-top: 16px;
             padding: 10px;
             background: #f5f5f5;
-            word-break: break-all;
             border: 1px solid #ccc;
             font-family: Consolas, monospace;
+            word-break: break-all;
             white-space: pre-wrap;
         }
     </style>
 </head>
 <body>
-    <h2>Employee OData Query</h2>
+    <h2>Company OData Query</h2>
+
+    <div class="row">
+        <label for="entity">Table:</label>
+        <select id="entity">
+            <option value="Employees">Employees</option>
+            <option value="Products">Products</option>
+            <option value="Branches">Branches</option>
+        </select>
+    </div>
 
     <div class="row">
         <label for="filter">$filter:</label>
@@ -89,27 +98,67 @@
     <div id="urlPreview"></div>
 
     <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Salary</th>
-            </tr>
-        </thead>
+        <thead id="tableHead"></thead>
         <tbody id="results"></tbody>
     </table>
 
     <script>
-        const baseUrl = "http://localhost:5197/odata/Employees";
+        const defaults = {
+            Employees: {
+                filter: "Salary ge 70000",
+                select: "Name,Email,Salary",
+                orderby: "Salary desc",
+                top: "5",
+                skip: "0"
+            },
+            Products: {
+                filter: "Price ge 1000",
+                select: "Name,Price",
+                orderby: "Price desc",
+                top: "5",
+                skip: "0"
+            },
+            Branches: {
+                filter: "City ne null",
+                select: "Name,City",
+                orderby: "Name asc",
+                top: "10",
+                skip: "0"
+            }
+        };
 
-        function buildQuery() {
+        const entitySelect = document.getElementById("entity");
+        const filterInput = document.getElementById("filter");
+        const selectInput = document.getElementById("select");
+        const orderbyInput = document.getElementById("orderby");
+        const topInput = document.getElementById("top");
+        const skipInput = document.getElementById("skip");
+
+        function applyDefaultsForEntity(entity) {
+            const d = defaults[entity];
+            filterInput.value = d.filter;
+            selectInput.value = d.select;
+            orderbyInput.value = d.orderby;
+            topInput.value = d.top;
+            skipInput.value = d.skip;
+        }
+
+        entitySelect.addEventListener("change", () => {
+            applyDefaultsForEntity(entitySelect.value);
+            buildUrlAndRun();
+        });
+
+        function buildUrl() {
+            const entity = entitySelect.value;
+            const base = `http://localhost:5197/odata/${entity}`;
+
             const params = new URLSearchParams();
 
-            const filter = document.getElementById("filter").value.trim();
-            const select = document.getElementById("select").value.trim();
-            const orderby = document.getElementById("orderby").value.trim();
-            const top = document.getElementById("top").value.trim();
-            const skip = document.getElementById("skip").value.trim();
+            const filter = filterInput.value.trim();
+            const select = selectInput.value.trim();
+            const orderby = orderbyInput.value.trim();
+            const top = topInput.value.trim();
+            const skip = skipInput.value.trim();
 
             if (filter) params.append("$filter", filter);
             if (select) params.append("$select", select);
@@ -117,18 +166,53 @@
             if (top) params.append("$top", top);
             if (skip) params.append("$skip", skip);
 
-            return params.toString();
+            const query = params.toString();
+            return query ? `${base}?${query}` : base;
         }
 
-        function showUrl() {
-            const query = buildQuery();
-            const url = query ? `${baseUrl}?${query}` : baseUrl;
+        function showUrl(url) {
             document.getElementById("urlPreview").textContent = url;
-            return url;
         }
 
-        async function loadEmployees() {
-            const url = showUrl();
+        function getCellValue(item, key) {
+            if (item == null || item[key] == null) return "";
+            const value = item[key];
+
+            if (typeof value === "object") {
+                if (value.Name) return value.Name;
+                if (value.City) return value.City;
+                if (value.Email) return value.Email;
+                return JSON.stringify(value);
+            }
+
+            return value;
+        }
+
+        function renderTable(items) {
+            const tableHead = document.getElementById("tableHead");
+            const results = document.getElementById("results");
+
+            if (!items.length) {
+                tableHead.innerHTML = "";
+                results.innerHTML = "<tr><td colspan='3'>No records found</td></tr>";
+                return;
+            }
+
+            const keys = Object.keys(items[0]).filter(k => k !== "$type");
+            tableHead.innerHTML = `
+            <tr>
+              ${keys.map(k => `<th>${k}</th>`).join("")}
+            </tr>
+          `;
+
+            results.innerHTML = items.map(item => {
+                return `<tr>${keys.map(k => `<td>${getCellValue(item, k)}</td>`).join("")}</tr>`;
+            }).join("");
+        }
+
+        async function loadData() {
+            const url = buildUrl();
+            showUrl(url);
 
             try {
                 const response = await fetch(url, {
@@ -140,34 +224,25 @@
                 }
 
                 const data = await response.json();
-                const items = data.value || [];
-                const tbody = document.getElementById("results");
-                tbody.innerHTML = "";
+                const items = Array.isArray(data.value) ? data.value : [];
 
-                if (!items.length) {
-                    tbody.innerHTML = "<tr><td colspan='3'>No records found</td></tr>";
-                    return;
-                }
-
-                items.forEach(item => {
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-                <td>${item.Name ?? ""}</td>
-                <td>${item.Email ?? ""}</td>
-                <td>${item.Salary ?? ""}</td>
-              `;
-                    tbody.appendChild(row);
-                });
-
+                renderTable(items);
             } catch (err) {
                 document.getElementById("results").innerHTML =
                     `<tr><td colspan="3">Error: ${err.message}</td></tr>`;
             }
         }
 
-        document.getElementById("runBtn").addEventListener("click", loadEmployees);
-        showUrl();
-        loadEmployees();
+        document.getElementById("runBtn").addEventListener("click", loadData);
+
+        applyDefaultsForEntity(entitySelect.value);
+        buildUrlAndRun();
+
+        function buildUrlAndRun() {
+            const url = buildUrl();
+            showUrl(url);
+            loadData();
+        }
     </script>
 </body>
 </html>

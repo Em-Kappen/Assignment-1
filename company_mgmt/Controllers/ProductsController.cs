@@ -9,8 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace company_mgmt.Controllers;
 
-public class ProductsController : ODataController
-{
+public class ProductsController : ODataController {
     private readonly AppDbContext _context;
     public ProductsController(AppDbContext context) => _context = context;
 

@@ -1,7 +1,6 @@
 ﻿namespace company_mgmt.Models;
 
-public class Branch
-{
+public class Branch {
     public int Id { get; set; }
     public string Name { get; set; } = "";
     public string City { get; set; } = "";

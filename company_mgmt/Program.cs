@@ -26,13 +26,11 @@ options.AddRouteComponents("odata", modelBuilder.GetEdmModel())
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
+using (var scope = app.Services.CreateScope()) {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
 
-    if (!db.Branches.Any())
-    {
+    if (!db.Branches.Any()) {
         var chennai = new Branch { Name = "Chennai Branch", City = "Chennai" };
         var bangalore = new Branch { Name = "Bangalore Branch", City = "Bangalore" };
 

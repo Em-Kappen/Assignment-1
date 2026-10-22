@@ -7,41 +7,31 @@ namespace company_mgmt.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class SetupController : ControllerBase
-{
+public class SetupController : ControllerBase {
     private readonly AppDbContext _context;
 
-    public SetupController(AppDbContext context)
-    {
+    public SetupController(AppDbContext context) {
         _context = context;
     }
 
     [HttpPost("init")]
-    public async Task<IActionResult> Initialize()
-    {
-        try
-        {
-            // Create database and tables if they don't exist
+    public async Task<IActionResult> Initialize() {
+        try {
             await _context.Database.EnsureCreatedAsync();
 
-            // Prevent duplicate seeding
-            if (await _context.Branches.AnyAsync())
-            {
+            if (await _context.Branches.AnyAsync()) {
                 return Ok(new
                 {
                     Message = "Database already initialized."
                 });
             }
 
-            // Branches
-            var chennai = new Branch
-            {
+            var chennai = new Branch {
                 Name = "Chennai Branch",
                 City = "Chennai"
             };
 
-            var bangalore = new Branch
-            {
+            var bangalore = new Branch {
                 Name = "Bangalore Branch",
                 City = "Bangalore"
             };
@@ -49,25 +39,20 @@ public class SetupController : ControllerBase
             _context.Branches.AddRange(chennai, bangalore);
             await _context.SaveChangesAsync();
 
-            // Employees
-            var employees = new List<Employee>
-            {
-                new()
-                {
+            var employees = new List<Employee> {
+                new() {
                     Name = "Lynn Matthew",
                     Email = "lynn@company.com",
                     Salary = 60000,
                     BranchId = chennai.Id
                 },
-                new()
-                {
+                new() {
                     Name = "John Smith",
                     Email = "john@company.com",
                     Salary = 75000,
                     BranchId = bangalore.Id
                 },
-                new()
-                {
+                new() {
                     Name = "Sarah Wilson",
                     Email = "sarah@company.com",
                     Salary = 85000,
@@ -78,22 +63,18 @@ public class SetupController : ControllerBase
             _context.Employees.AddRange(employees);
 
             // Products
-            var products = new List<Product>
-            {
-                new()
-                {
+            var products = new List<Product> {
+                new() {
                     Name = "Laptop",
                     Price = 70000,
                     BranchId = chennai.Id
                 },
-                new()
-                {
+                new() {
                     Name = "Keyboard",
                     Price = 2500,
                     BranchId = bangalore.Id
                 },
-                new()
-                {
+                new() {
                     Name = "Mouse",
                     Price = 1200,
                     BranchId = chennai.Id
@@ -104,17 +85,10 @@ public class SetupController : ControllerBase
 
             await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                Message = "Database initialized successfully."
-            });
+            return Ok(new{Message = "Database initialized successfully." });
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new
-            {
-                Error = ex.Message
-            });
+        catch (Exception ex) {
+            return StatusCode(500, new{Error = ex.Message});
         }
     }
 }

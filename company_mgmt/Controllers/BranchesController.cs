@@ -9,8 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace company_mgmt.Controllers;
 
-public class BranchesController : ODataController
-{
+public class BranchesController : ODataController {
     private readonly AppDbContext _context;
 
     public BranchesController(AppDbContext context) => _context = context;
