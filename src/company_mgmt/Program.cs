@@ -3,6 +3,7 @@ using company_mgmt.Models;
 using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OData.ModelBuilder;
+using System.Data;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,13 +41,26 @@ app.Run();
 static async Task EnsureDatabaseAsync(IServiceProvider services) {
     using var scope = services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var connection = db.Database.GetDbConnection();
 
-    var schemaExists = await db.Database.SqlQueryRaw<bool>(
-        @"SELECT EXISTS (
-              SELECT 1
-              FROM information_schema.tables
-              WHERE table_schema = 'public' AND table_name = 'branches'
-          ) AS ""Value"";").SingleAsync();
+    if (connection.State != ConnectionState.Open) {
+        await connection.OpenAsync();
+    }
+
+    using var command = connection.CreateCommand();
+    command.CommandText = @"
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'branches'
+        );";
+
+    var result = await command.ExecuteScalarAsync();
+    var schemaExists = result switch {
+        bool b => b,
+        string s => bool.TryParse(s, out var parsed) && parsed,
+        _ => Convert.ToBoolean(result)
+    };
 
     if (!schemaExists) {
         await db.Database.ExecuteSqlRawAsync(ReadEmbeddedSql("company_mgmt.Database.schema.sql"));
