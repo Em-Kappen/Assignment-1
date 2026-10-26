@@ -1,14 +1,13 @@
-# API implementation details
+﻿# API implementation details
 
 ## Application flow
 
-1. `Program.cs` loads the PostgreSQL connection string from ASP.NET Core configuration.
-2. Interactive launches prompt for the PostgreSQL password without echoing it. Non-interactive launches use the configured connection string.
-3. `Program.cs` checks whether the `branches` table exists and executes the embedded `database/schema.sql` resource only when it is missing.
-4. If the branches, employees, and products tables contain no rows, `Program.cs` executes the embedded `database/seed.sql` resource.
-5. `ODataConventionModelBuilder` exposes `Employee`, `Product`, and `Branch` as entity sets under the `odata` route.
-6. `AddOData` enables the query options listed below and limits `$top` to 100.
-7. Each controller returns an `IQueryable<T>` with `AsNoTracking()`, allowing OData to compose the query before Entity Framework Core executes it.
+1. `Program.cs` loads the PostgreSQL connection string from ASP.NET Core configuration, then prompts for the PostgreSQL password on every startup. The terminal input is not echoed and replaces any password in the configured connection string.
+2. `Program.cs` checks whether the `branches` table exists and executes the embedded `database/schema.sql` resource only when it is missing.
+3. If the branches, employees, and products tables contain no rows, `Program.cs` executes the embedded `database/seed.sql` resource.
+4. `ODataConventionModelBuilder` exposes `Employee`, `Product`, and `Branch` as entity sets under the `odata` route.
+5. `AddOData` enables the query options listed below and limits `$top` to 100.
+6. Each controller returns an `IQueryable<T>` with `AsNoTracking()`, allowing OData to compose the query before Entity Framework Core executes it.
 
 Database setup is guarded so normal application restarts do not drop or reseed
 existing data. The SQL files are embedded by `src/company_mgmt/company_mgmt.csproj`,
@@ -60,7 +59,13 @@ The PostgreSQL DDL and sample rows are in `database/schema.sql` and
 
 ## Deployment configuration
 
-For a system with different PostgreSQL credentials, set
-`ConnectionStrings__DefaultConnection` through the deployment environment or a
-secret manager. The setting must include the host, port, database, username,
-and password. Do not commit credentials to `appsettings.json`.
+The repository's `src/company_mgmt/appsettings.json` intentionally leaves the
+password blank so a credential is not stored in source control. Every
+`dotnet run` prompts for the PostgreSQL password in the terminal without
+echoing the characters. The entered value is used to authenticate to PostgreSQL
+for that process only.
+
+`ConnectionStrings__DefaultConnection` can be supplied through the environment
+or a secret manager to configure the host, port, database, and username. The
+application still requests the password interactively and uses the entered
+value, so startup requires a terminal.

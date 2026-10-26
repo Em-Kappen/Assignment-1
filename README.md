@@ -1,4 +1,4 @@
-# Company Management OData API
+﻿# Company Management OData API
 
 An ASP.NET Core OData API for querying branches, employees, and products stored in PostgreSQL. The project also includes a browser UI at `/`.
 
@@ -34,37 +34,40 @@ data. Existing data is not replaced on normal application restarts.
 
 ## Configure the connection string
 
-The local template is stored in `src/company_mgmt/appsettings.json`:
+The local template in `src/company_mgmt/appsettings.json` intentionally leaves
+the password blank so it is not stored in source control:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=companydb;Username=postgres;Password=your-password"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=companydb;Username=postgres;Password="
   }
 }
 ```
 
-When running interactively with `dotnet run`, the application always prompts
-for the PostgreSQL password without displaying typed characters. This entered
-password is used only in memory for that process.
+Every `dotnet run` prompts in the terminal for the PostgreSQL password without
+echoing the characters. The password you enter is used for that process only
+and replaces any password in the configured connection string; it is not
+stored in the repository.
 
-For another system or a non-interactive deployment, provide the complete
-connection string through an environment variable. Environment variables take
-precedence over `appsettings.json`:
+You can provide the host, port, database, and username through the
+`ConnectionStrings__DefaultConnection` environment variable. The application
+still prompts for the password at startup and uses the value entered in the
+terminal:
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection =
-  "Host=db-server;Port=5432;Database=companydb;Username=app_user;Password=your-password"
+  "Host=db-server;Port=5432;Database=companydb;Username=app_user;Password="
 ```
 
 On Linux/macOS:
 
 ```bash
-export ConnectionStrings__DefaultConnection='Host=db-server;Port=5432;Database=companydb;Username=app_user;Password=your-password'
+export ConnectionStrings__DefaultConnection='Host=db-server;Port=5432;Database=companydb;Username=app_user;Password='
 ```
 
-Deployment platforms can provide the same setting through a secret or
-configuration variable. Never commit a real password to source control.
+Environment variables configure connection details but do not make startup
+non-interactive. Never commit a real password to source control.
 
 ## Build and run
 

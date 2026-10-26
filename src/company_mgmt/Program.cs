@@ -3,14 +3,14 @@ using company_mgmt.Models;
 using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OData.ModelBuilder;
+using Npgsql;
 using System.Data;
 using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException(
-        "ConnectionStrings:DefaultConnection must be configured before starting the application.");
+var connectionString = BuildConnectionString(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -37,6 +37,49 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
 app.Run();
+
+static string BuildConnectionString(ConfigurationManager configuration) {
+    var rawConnectionString = configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException(
+            "ConnectionStrings:DefaultConnection must be configured before starting the application.");
+
+    var dbBuilder = new NpgsqlConnectionStringBuilder(rawConnectionString);
+    Console.Write($"Enter PostgreSQL password for '{dbBuilder.Username}': ");
+    var password = ReadPasswordFromConsole();
+    Console.WriteLine();
+
+    if (string.IsNullOrWhiteSpace(password)) {
+        throw new InvalidOperationException("PostgreSQL password is required to connect to the local database.");
+    }
+
+    dbBuilder.Password = password;
+    Environment.SetEnvironmentVariable("PGPASSWORD", password);
+    return dbBuilder.ConnectionString;
+}
+
+static string ReadPasswordFromConsole() {
+    var password = new StringBuilder();
+
+    while (true) {
+        var key = Console.ReadKey(intercept: true);
+
+        if (key.Key == ConsoleKey.Enter) {
+            return password.ToString();
+        }
+
+        if (key.Key == ConsoleKey.Backspace) {
+            if (password.Length > 0) {
+                password.Length--;
+            }
+
+            continue;
+        }
+
+        if (key.KeyChar != '\0') {
+            password.Append(key.KeyChar);
+        }
+    }
+}
 
 static async Task EnsureDatabaseAsync(IServiceProvider services) {
     using var scope = services.CreateScope();
