@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -27,6 +27,11 @@
 
         input {
             width: 420px;
+        }
+
+        #filterHelp {
+            display: block;
+            margin-left: 124px;
         }
 
         #top, #skip {
@@ -71,6 +76,7 @@
     <div class="row">
         <label for="filter">$filter:</label>
         <input id="filter" type="text" value="Salary ge 70000" />
+        <small id="filterHelp">Combine conditions with and/or, not commas (e.g., Salary ge 60000 and Salary le 70000).</small>
     </div>
 
     <div class="row">
@@ -162,6 +168,9 @@
 
             if (filter) params.append("$filter", filter);
             if (select) params.append("$select", select);
+            if (entity === "Employees") {
+                params.append("$expand", "Branch($select=Name)");
+            }
             if (orderby) params.append("$orderby", orderby);
             if (top) params.append("$top", top);
             if (skip) params.append("$skip", skip);
@@ -201,7 +210,7 @@
             const keys = Object.keys(items[0]).filter(k => k !== "$type");
             tableHead.innerHTML = `
             <tr>
-              ${keys.map(k => `<th>${k}</th>`).join("")}
+              ${keys.map(k => `<th>${k === "Branch" ? "Branch Name" : k}</th>`).join("")}
             </tr>
           `;
 
@@ -220,7 +229,19 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    const responseText = await response.text();
+                    let errorMessage = `HTTP ${response.status}`;
+
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        errorMessage = errorData.error?.message || errorMessage;
+                    } catch {
+                        if (responseText.trim()) {
+                            errorMessage = responseText;
+                        }
+                    }
+
+                    throw new Error(errorMessage);
                 }
 
                 const data = await response.json();
@@ -228,8 +249,13 @@
 
                 renderTable(items);
             } catch (err) {
-                document.getElementById("results").innerHTML =
-                    `<tr><td colspan="3">Error: ${err.message}</td></tr>`;
+                const row = document.createElement("tr");
+                const cell = document.createElement("td");
+                cell.colSpan = 3;
+                cell.textContent = `Error: ${err.message}`;
+                row.appendChild(cell);
+                document.getElementById("tableHead").replaceChildren();
+                document.getElementById("results").replaceChildren(row);
             }
         }
 

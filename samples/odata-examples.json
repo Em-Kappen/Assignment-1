@@ -1,81 +1,108 @@
 {
-  "$select": {
-    "request": "GET /odata/Employees?$select=Name,Email,Salary",
-    "response": {
-      "@odata.context": "$metadata#Employees(Name,Email,Salary)",
-      "value": [
-        {
-          "Name": "Lynn Matthew",
-          "Email": "lynn@company.com",
-          "Salary": 60000
-        },
-        {
-          "Name": "John Smith",
-          "Email": "john@company.com",
-          "Salary": 75000
-        }
+  "description": "Examples use the current Company Management EDM. Sample values below are deterministic seed examples, not a live database response.",
+  "odataSets": {
+    "Customers": {
+      "request": "GET /odata/Customers?$filter=Country eq 'USA'&$select=CustomerNumber,FirstName,LastName,Email&$orderby=CustomerId&$top=1",
+      "response": {
+        "@odata.context": "$metadata#Customers(CustomerNumber,FirstName,LastName,Email)",
+        "value": [
+          {
+            "CustomerNumber": "CUST-00000001",
+            "FirstName": "Avery",
+            "LastName": "Singh",
+            "Email": "customer1@example.test"
+          }
+        ]
+      }
+    },
+    "Products": {
+      "request": "GET /odata/Products?$filter=Category eq 'Electronics'&$select=Sku,ProductName,Category,UnitPrice&$orderby=ProductId&$top=1",
+      "response": {
+        "@odata.context": "$metadata#Products(Sku,ProductName,Category,UnitPrice)",
+        "value": [
+          {
+            "Sku": "SKU-0000002",
+            "ProductName": "Smart Display 2",
+            "Category": "Electronics",
+            "UnitPrice": 6.45
+          }
+        ]
+      }
+    },
+    "Employees": {
+      "request": "GET /odata/Employees?$filter=EmployeeNumber eq 'EMP-00000005'&$select=EmployeeNumber,FirstName,LastName,Department,Salary&$top=1",
+      "response": {
+        "@odata.context": "$metadata#Employees(EmployeeNumber,FirstName,LastName,Department,Salary)",
+        "value": [
+          {
+            "EmployeeNumber": "EMP-00000005",
+            "FirstName": "Jamie",
+            "LastName": "Smith",
+            "Department": "IT",
+            "Salary": 40006.85
+          }
+        ]
+      }
+    },
+    "Orders": {
+      "request": "GET /odata/Orders?$expand=Customer,OrderItems($expand=Product)&$count=true&$orderby=OrderId&$top=1",
+      "responseShape": {
+        "@odata.context": "$metadata#Orders(Customer(),OrderItems(Product()))",
+        "@odata.count": 500000,
+        "value": [
+          {
+            "OrderId": 1,
+            "CustomerId": 7919,
+            "OrderNumber": "ORD-000000001",
+            "OrderDate": "2021-01-08T00:00:00",
+            "OrderStatus": "Shipped",
+            "Subtotal": 11965.60,
+            "TaxAmount": 987.16,
+            "ShippingAmount": 9.95,
+            "TotalAmount": 12962.71,
+            "Customer": {
+              "CustomerId": 7919,
+              "CustomerNumber": "CUST-00007919"
+            },
+            "OrderItems": [
+              {
+                "OrderItemId": 1,
+                "ProductId": 1004,
+                "Quantity": 5,
+                "UnitPrice": 737.91,
+                "LineTotal": 3689.55,
+                "Product": {
+                  "ProductId": 1004,
+                  "Sku": "SKU-0001004",
+                  "ProductName": "Storage Drive 1004"
+                }
+              }
+            ]
+          }
+        ],
+        "note": "Abbreviated example: each seeded order has four order items."
+      }
+    },
+    "OrderItems": {
+      "request": "GET /odata/OrderItems?$expand=Order,Product&$top=100",
+      "navigationProperties": [
+        "Order",
+        "Product"
       ]
+    },
+    "Branches": {
+      "request": "GET /odata/Branches?$top=100",
+      "note": "Retained for compatibility with the earlier branch demo."
     }
   },
-  "$filter": {
-    "request": "GET /odata/Employees?$filter=Salary ge 70000",
-    "response": {
-      "@odata.context": "$metadata#Employees",
-      "value": [
-        {
-          "Id": 2,
-          "Name": "John Smith",
-          "Email": "john@company.com",
-          "Salary": 75000,
-          "BranchId": 2
-        },
-        {
-          "Id": 3,
-          "Name": "Sarah Wilson",
-          "Email": "sarah@company.com",
-          "Salary": 85000,
-          "BranchId": 2
-        }
-      ]
-    }
-  },
-  "$orderby": {
-    "request": "GET /odata/Products?$orderby=Price desc",
-    "response": {
-      "@odata.context": "$metadata#Products",
-      "value": [
-        { "Id": 1, "Name": "Laptop", "Price": 70000, "BranchId": 1 },
-        { "Id": 2, "Name": "Keyboard", "Price": 2500, "BranchId": 2 },
-        { "Id": 3, "Name": "Mouse", "Price": 1200, "BranchId": 1 }
-      ]
-    }
-  },
-  "$top": {
-    "request": "GET /odata/Employees?$top=2",
-    "response": {
-      "@odata.context": "$metadata#Employees",
-      "value": [
-        { "Id": 1, "Name": "Lynn Matthew", "Email": "lynn@company.com", "Salary": 60000, "BranchId": 1 },
-        { "Id": 2, "Name": "John Smith", "Email": "john@company.com", "Salary": 75000, "BranchId": 2 }
-      ]
-    }
-  },
-  "$skip": {
-    "request": "GET /odata/Employees?$orderby=Id&$skip=1",
-    "response": {
-      "@odata.context": "$metadata#Employees",
-      "value": [
-        { "Id": 2, "Name": "John Smith", "Email": "john@company.com", "Salary": 75000, "BranchId": 2 },
-        { "Id": 3, "Name": "Sarah Wilson", "Email": "sarah@company.com", "Salary": 85000, "BranchId": 2 }
-      ]
-    }
-  },
-  "$skiptoken": {
-    "request": "GET /odata/Employees?$skiptoken=server-generated-token",
-    "note": "Use the token from an OData @odata.nextLink. The token is service-generated and is not a fixed sample value.",
-    "response": {
-      "@odata.context": "$metadata#Employees",
-      "value": []
-    }
-  }
+  "queryOptions": [
+    "$filter",
+    "$select",
+    "$expand",
+    "$orderby",
+    "$top (maximum 10000)",
+    "$skip",
+    "$count",
+    "$skiptoken"
+  ]
 }

@@ -1,35 +1,93 @@
 @baseUrl = http://localhost:5197
-@skipToken = replace-with-token-from-odata-nextLink
 
-### $select - return only selected employee fields
-GET {{baseUrl}}/odata/Employees?$select=Name,Email,Salary
+### OData metadata (EDM entity sets and navigation properties)
+GET {{baseUrl}}/odata/$metadata
+Accept: application/xml
+
+### Customers
+GET {{baseUrl}}/odata/Customers?$top=100
 Accept: application/json
 
-### $filter - return employees whose salary is at least 70000
-GET {{baseUrl}}/odata/Employees?$filter=Salary%20ge%2070000
+### Product filtering, projection and result count
+GET {{baseUrl}}/odata/Products?$filter=Category%20eq%20%27Electronics%27&$select=Sku,ProductName,UnitPrice&$count=true&$orderby=ProductId&$top=100
 Accept: application/json
 
-### $orderby - sort products from most expensive to least expensive
-GET {{baseUrl}}/odata/Products?$orderby=Price%20desc
+### Customer country filter, count and paging
+GET {{baseUrl}}/odata/Customers?$filter=Country%20eq%20%27USA%27&$count=true&$orderby=CustomerId&$skip=0&$top=100
 Accept: application/json
 
-### $top - limit the number of returned records
-GET {{baseUrl}}/odata/Employees?$top=2
+### Product projection and category filtering
+GET {{baseUrl}}/odata/Products?$filter=Category%20eq%20%27Electronics%27&$select=ProductName,UnitPrice,Category&$orderby=ProductId&$top=100
 Accept: application/json
 
-### $skip - skip the first record
-GET {{baseUrl}}/odata/Employees?$orderby=Id&$skip=1
+### Employee filter, sorting and projection
+GET {{baseUrl}}/odata/Employees?$filter=Department%20eq%20%27IT%27&$orderby=Salary%20desc&$select=FirstName,LastName,Department,Salary&$top=100
 Accept: application/json
 
-### $skiptoken - continue from a server-generated OData nextLink
-# Use the complete nextLink returned by the service, rather than this placeholder.
-GET {{baseUrl}}/odata/Employees?$skiptoken={{skipToken}}
+### Employee manager hierarchy
+GET {{baseUrl}}/odata/Employees?$expand=Manager&$top=25
 Accept: application/json
 
-### Combined options
-GET {{baseUrl}}/odata/Employees?$filter=Salary%20ge%2070000&$select=Name,Email,Salary&$orderby=Salary%20desc&$skip=0&$top=2
+### Employee branch relation
+GET {{baseUrl}}/odata/Employees?$expand=BranchOffice&$top=25
 Accept: application/json
 
-### Entity lookup
-GET {{baseUrl}}/odata/Branches(1)
+### Orders with customer and order items
+GET {{baseUrl}}/odata/Orders?$expand=Customer,OrderItems&$top=100
 Accept: application/json
+
+### Orders with nested product data
+GET {{baseUrl}}/odata/Orders?$expand=OrderItems($expand=Product),Customer&$top=50
+Accept: application/json
+
+### Customer orders
+GET {{baseUrl}}/odata/Customers?$expand=Orders&$count=true&$top=20
+Accept: application/json
+
+### Order items
+GET {{baseUrl}}/odata/OrderItems?$expand=Product,Order&$top=100
+Accept: application/json
+
+### Branch compatibility endpoint
+GET {{baseUrl}}/odata/Branches?$top=100
+Accept: application/json
+
+### Create or upgrade schema
+POST {{baseUrl}}/api/setup/schema
+
+### Seed benchmark data (run schema first)
+POST {{baseUrl}}/api/setup/seed
+
+### Table counts
+GET {{baseUrl}}/api/performance/table-counts
+
+### Database size and latest benchmark
+GET {{baseUrl}}/api/performance/database-summary
+
+### Indexes
+GET {{baseUrl}}/api/performance/index-summary
+
+### Execute ten benchmark scenarios, five runs each
+POST {{baseUrl}}/api/performance/benchmarks
+
+### Benchmark history
+GET {{baseUrl}}/api/performance/benchmarks
+
+### Persisted query history
+GET {{baseUrl}}/api/query-history
+
+### Query history by id
+GET {{baseUrl}}/api/query-history/1
+
+### Record a UI query
+POST {{baseUrl}}/api/query-history
+Content-Type: application/json
+
+{
+  "entitySet": "Customers",
+  "requestUrl": "/odata/Customers?$top=100",
+  "durationMilliseconds": 12.5,
+  "payloadBytes": 2048,
+  "httpStatusCode": 200,
+  "resultCount": 100
+}

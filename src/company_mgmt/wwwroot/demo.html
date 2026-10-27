@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Company Data Demo</title>
+  <style>
+    :root { color-scheme: light; font-family: Segoe UI, Arial, sans-serif; color: #172033; background: #f3f6fa; }
+    body { margin: 0; }
+    header { background: #14283f; color: white; padding: 1rem max(1rem, calc((100% - 1200px) / 2)); }
+    header h1 { margin: 0 0 .75rem; font-size: 1.35rem; }
+    nav { display: flex; flex-wrap: wrap; gap: .75rem; }
+    nav a { color: #d7eaff; text-decoration: none; padding: .3rem .6rem; border-radius: .25rem; }
+    nav a.active, nav a:hover { background: #315779; color: white; }
+    main { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem 2rem; }
+    h2 { margin-top: 0; }
+    .card { background: white; border: 1px solid #d7e0ea; border-radius: .45rem; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 6px #19314b0c; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .8rem; }
+    .metric { font-size: 1.5rem; font-weight: 650; margin-top: .35rem; }
+    label { display: block; font-weight: 600; margin: .6rem 0 .3rem; }
+    input, select, textarea { box-sizing: border-box; width: 100%; border: 1px solid #bbc8d6; border-radius: .3rem; padding: .55rem; font: inherit; }
+    textarea { min-height: 100px; font-family: Consolas, monospace; }
+    button { border: 0; border-radius: .3rem; background: #1769aa; color: white; padding: .55rem .85rem; margin: .45rem .35rem .2rem 0; cursor: pointer; font: inherit; }
+    button.secondary { background: #53677d; }
+    button:disabled { opacity: .6; cursor: wait; }
+    .muted { color: #576b7f; }
+    .error { color: #a32626; white-space: pre-wrap; }
+    .success { color: #187044; }
+    .table-wrap { overflow: auto; max-width: 100%; }
+    table { border-collapse: collapse; min-width: 100%; white-space: nowrap; }
+    th, td { text-align: left; vertical-align: top; border: 1px solid #d8e0e8; padding: .45rem .6rem; }
+    th { background: #eaf0f6; position: sticky; top: 0; }
+    pre { max-height: 65vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #101c2a; color: #d7e8f7; padding: 1rem; border-radius: .3rem; }
+    .hidden { display: none; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+    .toolbar button { margin: .2rem 0; }
+    @media (max-width: 620px) { main { margin-top: 1rem; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Company Data Demonstration</h1>
+  <nav>
+    <a href="/demo" data-page="dashboard">Dashboard</a>
+    <a href="/demo/setup" data-page="setup">Database setup</a>
+    <a href="/demo/query" data-page="query">OData query runner</a>
+    <a href="/demo/performance" data-page="performance">Performance</a>
+  </nav>
+</header>
+<main>
+  <section id="dashboard" class="page">
+    <h2>Database dashboard</h2>
+    <div class="grid">
+      <div class="card"><div class="muted">Connection</div><div class="metric" id="connection">Checking…</div></div>
+      <div class="card"><div class="muted">Schema</div><div class="metric" id="schema-state">—</div></div>
+      <div class="card"><div class="muted">Database size</div><div class="metric" id="db-size">—</div></div>
+      <div class="card"><div class="muted">Rows (all tables)</div><div class="metric" id="total-rows">—</div></div>
+      <div class="card"><div class="muted">Last benchmark</div><div class="metric" id="last-benchmark">—</div></div>
+    </div>
+    <div class="card"><h3>Table row counts</h3><div id="counts" class="table-wrap">Loading…</div></div>
+    <div class="card"><h3>OData endpoints</h3><ul id="endpoints"></ul></div>
+  </section>
+
+  <section id="setup" class="page hidden">
+    <h2>Database setup</h2>
+    <div class="card">
+      <p>Schema and deterministic benchmark data are managed by the versioned SQL scripts. Schema and seed operations are safe to retry.</p>
+      <button id="schema-button">Run schema.sql</button>
+      <button id="seed-button">Run seed.sql</button>
+      <p id="setup-state" class="muted">Ready.</p>
+      <div id="setup-counts" class="table-wrap"></div>
+      <h3>Execution log</h3><pre id="setup-log">No setup operation run in this session.</pre>
+    </div>
+  </section>
+
+  <section id="query" class="page hidden">
+    <h2>OData query runner</h2>
+    <div class="card">
+      <label for="entity">Entity set</label>
+      <select id="entity">
+        <option>Customers</option><option>Products</option><option>Orders</option>
+        <option>OrderItems</option><option>Employees</option><option>Branches</option>
+      </select>
+      <label for="query-text">OData query options (example: $expand=Customer,OrderItems&amp;$top=100)</label>
+      <textarea id="query-text" spellcheck="false">$top=100</textarea>
+      <div class="grid">
+        <div><label for="page-size">Page size ($top)</label><input id="page-size" type="number" min="1" max="10000" placeholder="Use query value"></div>
+        <div><label for="page-skip">Rows to skip ($skip)</label><input id="page-skip" type="number" min="0" placeholder="0"></div>
+        <div><label for="sort-order">Sort ($orderby)</label><input id="sort-order" placeholder="Salary desc"></div>
+      </div>
+      <div class="toolbar">
+        <button id="execute-query">Execute query</button>
+        <button id="previous-page" class="secondary">Previous page</button>
+        <button id="next-page" class="secondary">Next page</button>
+        <button id="table-toggle" class="secondary">Table View</button>
+        <button id="json-toggle" class="secondary">JSON View</button>
+        <button id="copy-response" class="secondary">Copy response</button>
+        <button id="download-response" class="secondary">Download response</button>
+      </div>
+      <p id="request-preview" class="muted">Request URL: —</p>
+      <p id="query-metrics" class="muted"></p>
+      <p id="query-error" class="error"></p>
+    </div>
+    <div class="card"><h3>Query history</h3><div id="query-history"></div></div>
+    <div class="card" id="table-card"><h3>Results table</h3><div id="query-table" class="table-wrap"></div></div>
+    <div class="card hidden" id="json-card"><h3>Raw JSON response</h3><pre id="query-json"></pre></div>
+  </section>
+
+  <section id="performance" class="page hidden">
+    <h2>Performance benchmarks</h2>
+    <div class="card">
+      <p>Runs the ten documented OData scenarios five times each. Expansion scenarios intentionally exercise larger result payloads.</p>
+      <button id="run-benchmarks">Run all benchmarks (50 requests)</button>
+      <span id="benchmark-state" class="muted"></span>
+      <div id="benchmark-overview" class="grid"></div>
+    </div>
+    <div class="card"><h3>Benchmark history</h3><div id="benchmark-history" class="table-wrap"></div></div>
+    <div class="card"><h3>Database indexes</h3><div id="index-summary" class="table-wrap"></div></div>
+  </section>
+</main>
+<script>
+(() => {
+  const endpoints = ["Customers", "Products", "Orders", "OrderItems", "Employees"];
+  const page = location.pathname.split("/").filter(Boolean)[1] || "dashboard";
+  const activePage = ["setup", "query", "performance"].includes(page) ? page : "dashboard";
+  document.querySelectorAll(".page").forEach(section => section.classList.toggle("hidden", section.id !== activePage));
+  document.querySelectorAll("nav a").forEach(link => link.classList.toggle("active", link.dataset.page === activePage));
+  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+  const asJson = value => JSON.stringify(value, null, 2);
+  const api = async (path, options = {}) => {
+    const response = await fetch(path, options);
+    const text = await response.text();
+    let data;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}\n${typeof data === "string" ? data : asJson(data)}`);
+    return { response, data };
+  };
+  const byteSize = text => new Blob([text]).size;
+
+  async function loadDashboard() {
+    const connection = document.querySelector("#connection");
+    try {
+      const { data } = await api("/api/performance/database-summary");
+      connection.textContent = data.connected ? "Connected" : "Database not found";
+      connection.className = data.connected ? "metric success" : "metric muted";
+      document.querySelector("#schema-state").textContent = data.schemaInitialized ? "Initialized" : "Not initialized";
+      document.querySelector("#schema-state").className = data.schemaInitialized ? "metric success" : "metric muted";
+      document.querySelector("#db-size").textContent = `${(data.databaseSizeBytes / 1024 / 1024).toFixed(1)} MB`;
+      const values = Object.values(data.tableCounts);
+      document.querySelector("#total-rows").textContent = values.reduce((sum, n) => sum + n, 0).toLocaleString();
+      document.querySelector("#last-benchmark").textContent = data.lastBenchmarkExecution ? new Date(data.lastBenchmarkExecution).toLocaleString() : "None";
+      document.querySelector("#counts").innerHTML = `<p class="muted">${escapeHtml(data.statusMessage)}</p>` +
+        tableHtml(Object.entries(data.tableCounts).map(([table, count]) => ({ table, count: count.toLocaleString() })));
+    } catch (error) {
+      connection.textContent = "Unavailable";
+      connection.className = "metric error";
+      document.querySelector("#counts").textContent = error.message;
+      document.querySelector("#schema-state").textContent = "Unavailable";
+      document.querySelector("#db-size").textContent = "—";
+      document.querySelector("#total-rows").textContent = "—";
+    }
+    document.querySelector("#endpoints").innerHTML = endpoints.map(name => `<li><a href="/odata/${name}?$top=100">/odata/${name}</a></li>`).join("");
+  }
+
+  function tableHtml(rows) {
+    if (!rows.length) return '<p class="muted">No rows returned.</p>';
+    const cols = [...new Set(rows.flatMap(row => Object.keys(row)))];
+    return `<table><thead><tr>${cols.map(col => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>${rows.map(row =>
+      `<tr>${cols.map(col => `<td>${escapeHtml(typeof row[col] === "object" ? asJson(row[col]) : row[col])}</td>`).join("")}</tr>`
+    ).join("")}</tbody></table>`;
+  }
+
+  function flatten(value, prefix = "", output = {}) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      for (const [key, nested] of Object.entries(value)) {
+        if (key.startsWith("@")) continue;
+        flatten(nested, prefix ? `${prefix}.${key}` : key, output);
+      }
+    } else {
+      output[prefix] = Array.isArray(value) ? JSON.stringify(value) : value;
+    }
+    return output;
+  }
+
+  const savedQuery = { json: "", url: "" };
+  let historyItems = [];
+  async function renderHistory() {
+    try {
+      const { data } = await api("/api/query-history");
+      historyItems = data;
+      document.querySelector("#query-history").innerHTML = data.length
+      ? `<ol>${data.slice(0, 15).map((item, index) => `<li><button class="secondary history-item" data-index="${index}">${escapeHtml(item.requestUrl)} — HTTP ${item.httpStatusCode} · ${escapeHtml(new Date(item.executedAt).toLocaleString())}</button></li>`).join("")}</ol>`
+      : '<p class="muted">No queries yet.</p>';
+      document.querySelectorAll(".history-item").forEach(button => button.addEventListener("click", () => {
+        const item = historyItems[Number(button.dataset.index)];
+        const parsed = new URL(item.requestUrl, location.origin);
+        document.querySelector("#entity").value = parsed.pathname.split("/").pop();
+        document.querySelector("#query-text").value = parsed.search.slice(1);
+        document.querySelector("#page-size").value = parsed.searchParams.get("$top") || "";
+        document.querySelector("#page-skip").value = parsed.searchParams.get("$skip") || "";
+        document.querySelector("#sort-order").value = parsed.searchParams.get("$orderby") || "";
+        document.querySelector("#execute-query").click();
+      }));
+    } catch (error) {
+      document.querySelector("#query-history").textContent = `Query history unavailable: ${error.message}`;
+    }
+  }
+
+  async function executeQuery() {
+    const options = document.querySelector("#query-text").value.trim();
+    const entity = document.querySelector("#entity").value;
+    const path = options.startsWith("/odata/") ? options : `/odata/${entity}${options ? (options.startsWith("?") ? options : `?${options}`) : ""}`;
+    const url = new URL(path, location.origin);
+    if (url.origin !== location.origin || !url.pathname.startsWith("/odata/"))
+      throw new Error("Enter OData options or an /odata/... path on this application.");
+    const pageSize = document.querySelector("#page-size").value;
+    const skip = document.querySelector("#page-skip").value;
+    const orderBy = document.querySelector("#sort-order").value.trim();
+    if (pageSize) url.searchParams.set("$top", pageSize);
+    if (skip) url.searchParams.set("$skip", skip);
+    if (orderBy) url.searchParams.set("$orderby", orderBy);
+    document.querySelector("#request-preview").textContent = `Request URL: ${url.pathname}${url.search}`;
+    document.querySelector("#query-error").textContent = "";
+    document.querySelector("#query-metrics").textContent = "Executing…";
+    const start = performance.now();
+    let response;
+    let text;
+    try {
+      response = await fetch(`${url.pathname}${url.search}`);
+      text = await response.text();
+    } catch (error) {
+      const duration = performance.now() - start;
+      await recordQuery(entity, `${url.pathname}${url.search}`, duration, 0, 0, 0, error.message);
+      throw error;
+    }
+    const duration = performance.now() - start;
+    savedQuery.json = text;
+    savedQuery.url = `${url.pathname}${url.search}`;
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
+    document.querySelector("#query-json").textContent = typeof data === "string" ? data : asJson(data);
+    const values = Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : data == null ? [] : [data];
+    const rows = values.map(value => flatten(value));
+    document.querySelector("#query-table").innerHTML = tableHtml(rows);
+    document.querySelector("#query-metrics").textContent =
+      `HTTP ${response.status} · ${duration.toFixed(1)} ms · ${byteSize(text).toLocaleString()} bytes · ${data?.["@odata.count"] ?? values.length} results`;
+    if (!response.ok) document.querySelector("#query-error").textContent = typeof data === "string" ? data : asJson(data);
+    await recordQuery(entity, savedQuery.url, duration, byteSize(text), response.status, values.length, response.ok ? null : (typeof data === "string" ? data : asJson(data)));
+    await renderHistory();
+  }
+
+  async function recordQuery(entitySet, requestUrl, durationMilliseconds, payloadBytes, httpStatusCode, resultCount, errorMessage) {
+    await api("/api/query-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entitySet, requestUrl, durationMilliseconds, payloadBytes, httpStatusCode, resultCount, errorMessage: errorMessage?.slice(0, 2000) })
+    });
+  }
+
+  if (activePage === "dashboard") loadDashboard();
+  if (activePage === "setup") {
+    async function runSetup(script) {
+      const button = document.querySelector(`#${script}-button`);
+      const state = document.querySelector("#setup-state");
+      button.disabled = true;
+      state.textContent = `Running ${script}.sql… Large seed data generation may take several minutes.`;
+      document.querySelector("#setup-log").textContent = `Started ${script}.sql at ${new Date().toLocaleString()}`;
+      try {
+        const { data } = await api(`/api/setup/${script}`, { method: "POST" });
+        state.textContent = `${data.message} At ${new Date(data.executedAt).toLocaleString()} (${data.durationMilliseconds.toLocaleString()} ms).`;
+        state.className = "success";
+        document.querySelector("#setup-counts").innerHTML = tableHtml(Object.entries(data.rowCounts).map(([table, count]) => ({ table, inserted: count.toLocaleString() })));
+        document.querySelector("#setup-log").textContent = asJson(data);
+      } catch (error) {
+        state.textContent = "Setup failed.";
+        state.className = "error";
+        document.querySelector("#setup-log").textContent = error.message;
+      } finally { button.disabled = false; }
+    }
+    document.querySelector("#schema-button").addEventListener("click", () => runSetup("schema"));
+    document.querySelector("#seed-button").addEventListener("click", () => runSetup("seed"));
+  }
+  if (activePage === "query") {
+    document.querySelector("#execute-query").addEventListener("click", () =>
+      executeQuery().catch(error => {
+        document.querySelector("#query-error").textContent = error.message;
+        document.querySelector("#query-metrics").textContent = "Request failed.";
+      }));
+    document.querySelector("#table-toggle").addEventListener("click", () => {
+      document.querySelector("#table-card").classList.remove("hidden");
+      document.querySelector("#json-card").classList.add("hidden");
+    });
+    document.querySelector("#json-toggle").addEventListener("click", () => {
+      document.querySelector("#table-card").classList.add("hidden");
+      document.querySelector("#json-card").classList.remove("hidden");
+    });
+    document.querySelector("#copy-response").addEventListener("click", async () => {
+      if (savedQuery.json) await navigator.clipboard.writeText(savedQuery.json);
+    });
+    document.querySelector("#download-response").addEventListener("click", () => {
+      const blob = new Blob([savedQuery.json || ""], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "odata-response.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+    document.querySelector("#next-page").addEventListener("click", () => {
+    const current = new URLSearchParams(document.querySelector("#query-text").value.replace(/^\?/, ""));
+    const step = Number(document.querySelector("#page-size").value || current.get("$top") || 100);
+    const skip = Number(document.querySelector("#page-skip").value || current.get("$skip") || 0);
+      document.querySelector("#page-size").value = step;
+      document.querySelector("#page-skip").value = skip + step;
+      document.querySelector("#execute-query").click();
+    });
+    document.querySelector("#previous-page").addEventListener("click", () => {
+      const current = new URLSearchParams(document.querySelector("#query-text").value.replace(/^\?/, ""));
+      const step = Number(document.querySelector("#page-size").value || current.get("$top") || 100);
+      const skip = Number(document.querySelector("#page-skip").value || current.get("$skip") || 0);
+      document.querySelector("#page-size").value = step;
+      document.querySelector("#page-skip").value = Math.max(0, skip - step);
+      document.querySelector("#execute-query").click();
+    });
+    renderHistory();
+  }
+  if (activePage === "performance") {
+    async function refreshPerformance() {
+      const { data } = await api("/api/performance/benchmarks");
+      const fastest = data.length ? data.reduce((best, item) => item.minimumMilliseconds < best.minimumMilliseconds ? item : best) : null;
+      const slowest = data.length ? data.reduce((worst, item) => item.maximumMilliseconds > worst.maximumMilliseconds ? item : worst) : null;
+      const average = data.length ? data.reduce((sum, item) => sum + item.averageMilliseconds, 0) / data.length : 0;
+      const successes = data.reduce((sum, item) => sum + item.successCount, 0);
+      const failures = data.reduce((sum, item) => sum + item.failureCount, 0);
+      document.querySelector("#benchmark-overview").innerHTML = [
+        ["Fastest", fastest ? `${fastest.minimumMilliseconds.toFixed(1)} ms · ${fastest.scenario}` : "—"],
+        ["Slowest", slowest ? `${slowest.maximumMilliseconds.toFixed(1)} ms · ${slowest.scenario}` : "—"],
+        ["Average scenario time", `${average.toFixed(1)} ms`],
+        ["Success / failure", `${successes} / ${failures}`]
+      ].map(([label, value]) => `<div class="card"><div class="muted">${escapeHtml(label)}</div><div class="metric">${escapeHtml(value)}</div></div>`).join("");
+      document.querySelector("#benchmark-history").innerHTML = tableHtml(data.map(item => ({
+        scenario: item.scenario, executed: new Date(item.executedAt).toLocaleString(),
+        minMs: item.minimumMilliseconds.toFixed(1), maxMs: item.maximumMilliseconds.toFixed(1),
+        averageMs: item.averageMilliseconds.toFixed(1), medianMs: item.medianMilliseconds.toFixed(1),
+        success: item.successCount, failures: item.failureCount, payloadBytes: item.payloadBytes.toLocaleString(),
+        datasetSize: item.datasetSize.toLocaleString(), httpStatuses: item.statusCodesJson
+      })));
+      const { data: indexes } = await api("/api/performance/index-summary");
+      document.querySelector("#index-summary").innerHTML = tableHtml(indexes.map(({ table, indexName, definition }) => ({ table, indexName, definition })));
+    }
+    refreshPerformance().catch(error => document.querySelector("#benchmark-history").textContent = error.message);
+    document.querySelector("#run-benchmarks").addEventListener("click", async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      document.querySelector("#benchmark-state").textContent = "Benchmark suite is running; this can take a while.";
+      try {
+        const { data } = await api("/api/performance/benchmarks", { method: "POST" });
+        const rows = data.scenarios.map(item => ({
+          scenario: item.scenario, minMs: item.minimumMilliseconds.toFixed(1),
+          maxMs: item.maximumMilliseconds.toFixed(1), averageMs: item.averageMilliseconds.toFixed(1),
+          medianMs: item.medianMilliseconds.toFixed(1), success: item.successCount,
+          failures: item.failureCount, bytes: item.payloadBytes.toLocaleString(),
+          httpStatuses: item.statusCodes.join(", ")
+        }));
+        document.querySelector("#benchmark-overview").innerHTML = `<div class="card">Dataset rows<div class="metric">${data.datasetSize.toLocaleString()}</div></div>`;
+        document.querySelector("#benchmark-history").innerHTML = tableHtml(rows);
+        document.querySelector("#benchmark-state").textContent = `Completed ${data.scenarios.length} scenarios, five runs each.`;
+        await refreshPerformance();
+      } catch (error) { document.querySelector("#benchmark-state").textContent = error.message; }
+      finally { button.disabled = false; }
+    });
+  }
+})();
+</script>
+</body>
+</html>

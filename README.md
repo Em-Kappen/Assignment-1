@@ -1,124 +1,133 @@
-﻿# Company Management OData API
+# Company Management OData Performance Demo
 
-An ASP.NET Core OData API for querying branches, employees, and products stored in PostgreSQL. The project also includes a browser UI at `/`.
+An ASP.NET Core 10.0 application demonstrating PostgreSQL, Entity Framework
+Core, relational OData queries, deterministic large-scale seed data, and a
+browser-based query/benchmark console.
 
-## Deliverables
+## Requirements
 
-| Deliverable | Location |
-| --- | --- |
-| Source code | `src/company_mgmt/` |
-| Database schema | `database/schema.sql` |
-| Seed data | `database/seed.sql` |
-| API implementation details | `docs/api-details.md` |
-| OData requests and responses | `samples/odata-requests.http` and `samples/responses/odata-examples.json` |
-| Setup and run instructions | This file |
-
-## Prerequisites
-
-- .NET 10 SDK
+- .NET 10.0.14 runtime (the project targets `net10.0`)
 - PostgreSQL 14 or later
-- Visual Studio 2026, VS Code, or another .NET-compatible IDE
+- A terminal for the first run when no password is supplied through configuration
 
-## Database setup
+## Run
 
-Create an empty PostgreSQL database. The application executes the embedded
-`database/schema.sql` and `database/seed.sql` files at startup when needed:
+1. Configure the PostgreSQL server address, target database, and user:
 
-```bash
-psql -U postgres -c "CREATE DATABASE companydb;"
-```
+   ```powershell
+   $env:ConnectionStrings__DefaultConnection = "Host=localhost;Port=5432;Database=companydb;Username=postgres"
+   ```
 
-The schema script runs only when the `branches` table is missing. The seed
-script runs only when the branches, employees, and products tables contain no
-data. Existing data is not replaced on normal application restarts.
+   If `companydb` does not exist, the **Run schema.sql** setup operation creates
+   it by connecting to PostgreSQL's maintenance database first. The configured
+   user must have `CREATEDB` permission (the `postgres` superuser does by
+   default). No application database is created during app startup.
 
-## Configure the connection string
+   The password can be supplied in the connection string through a secret
+   manager/environment configuration. Otherwise, `dotnet run` prompts once,
+   hides typed characters, and holds the password in process memory only. An
+   existing `PGPASSWORD` environment variable is also honored. No password is
+   written to application settings or exported by the application.
 
-The local template in `src/company_mgmt/appsettings.json` intentionally leaves
-the password blank so it is not stored in source control:
+2. From the repository root, start the application:
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=companydb;Username=postgres;Password="
-  }
-}
-```
+   ```powershell
+   dotnet run --project src\company_mgmt\company_mgmt.csproj
+   ```
 
-Every `dotnet run` prompts in the terminal for the PostgreSQL password without
-echoing the characters. The password you enter is used for that process only
-and replaces any password in the configured connection string; it is not
-stored in the repository.
+   The application does not create or seed tables at startup. It starts after
+   connection-string/password configuration; database operations begin when an
+   API call or the UI requests them.
 
-You can provide the host, port, database, and username through the
-`ConnectionStrings__DefaultConnection` environment variable. The application
-still prompts for the password at startup and uses the value entered in the
-terminal:
+3. Open `http://localhost:5197/demo` and choose **Database setup**. Run the
+   schema first (it creates the target database if needed), then the seed. The
+   seed creates 100,000 customers, 50,000 products, 500,000 orders, 2,000,000
+   order items, and 1,000,000 employees.
+   The one-time seed is deterministic and can take several minutes.
 
-```powershell
-$env:ConnectionStrings__DefaultConnection =
-  "Host=db-server;Port=5432;Database=companydb;Username=app_user;Password="
-```
+## Database design and scale
 
-On Linux/macOS:
+`database/schema.sql` is the authoritative idempotent PostgreSQL DDL, including
+the benchmark history table. It configures primary/foreign keys, check
+constraints, indexes, and compatibility upgrades for the earlier branch-based
+demo schema. The one SQL seed script, `database/seed.sql`, uses PostgreSQL
+`generate_series`, predictable formulas, and a transaction-scoped seed marker.
+It refuses to duplicate or mix a partially populated unmarked dataset. An
+interrupted seed transaction rolls back atomically; rerun the same script.
+Customer assignment uses bigint arithmetic for the 500,000-order sequence to
+avoid overflowing PostgreSQL's 32-bit integer multiplication.
 
-```bash
-export ConnectionStrings__DefaultConnection='Host=db-server;Port=5432;Database=companydb;Username=app_user;Password='
-```
+Customers have many orders; orders have many order items; products are
+referenced by order items; employees have a nullable manager self-reference.
+Branch offices remain available for the original demo, and employees/products
+retain branch assignments. Cascades are restricted for customer/product/manager
+deletes and limited to order-item cleanup when an order is deleted.
 
-Environment variables configure connection details but do not make startup
-non-interactive. Never commit a real password to source control.
+Indexes cover customer number and email, product SKU/category, order customer,
+date and status, order-item order/product, employee number/department/manager,
+as well as common branch, salary, and timestamp lookups. Index definitions are
+reported at `/api/performance/index-summary`.
 
-## Build and run
+All OData controllers return no-tracking `IQueryable` values. OData applies
+filtering, projection, ordering, count, expansion and paging in PostgreSQL
+through EF Core. `$top` is capped at 10,000; query-level `$skip` is available.
+Nested expansion depth and result size should be controlled by clients for
+large data sets.
 
-```bash
-dotnet restore src/company_mgmt/company_mgmt.csproj
-dotnet build src/company_mgmt/company_mgmt.csproj
-dotnet run --project src/company_mgmt/company_mgmt.csproj
-```
+## Demo pages and APIs
 
-Configured development URLs:
-
-- HTTP: `http://localhost:5197`
-- HTTPS: `https://localhost:7046`
-
-Open `http://localhost:5197/` for the browser UI.
-
-## API endpoints
-
-| Endpoint | Description |
+| Page/endpoint | Purpose |
 | --- | --- |
-| `GET /odata/Employees` | Query employees |
-| `GET /odata/Employees({id})` | Get one employee |
-| `GET /odata/Products` | Query products |
-| `GET /odata/Products({id})` | Get one product |
-| `GET /odata/Branches` | Query branches |
-| `GET /odata/Branches({id})` | Get one branch |
+| `/demo` | Database status, counts, size, last benchmark, OData links |
+| `/demo/setup` | Run `schema.sql` and `seed.sql`, inspect execution results |
+| `/demo/query` | Execute OData queries, view dynamic table/raw JSON, page/sort, copy/download and inspect history |
+| `/demo/performance` | Run and review the repeated benchmark suite and database indexes |
+| `POST /api/setup/schema` | Execute idempotent `database/schema.sql` transactionally |
+| `POST /api/setup/seed` | Execute deterministic, guarded `database/seed.sql` transactionally |
+| `GET /api/performance/table-counts` | Read row counts for business, benchmark, and query-history tables |
+| `GET /api/performance/database-summary` | Database size, counts and latest benchmark timestamp |
+| `GET /api/performance/index-summary` | PostgreSQL index definitions |
+| `POST /api/performance/benchmarks` | Run ten OData scenarios five times each |
+| `GET /api/performance/benchmarks` | Retrieve the latest 200 persisted scenario summaries |
+| `GET /api/query-history` | Retrieve the latest 100 UI query executions |
+| `GET /api/query-history/{id}` | Retrieve a query execution by ID |
+| `POST /api/query-history` | Persist query execution metadata from the UI |
 
-All OData responses are JSON. Query examples and expected response shapes are
-in `samples/odata-requests.http` and `samples/responses/odata-examples.json`.
+OData entity sets:
 
-## Supported OData query options
+- `/odata/Customers`
+- `/odata/Products`
+- `/odata/Orders`
+- `/odata/OrderItems`
+- `/odata/Employees`
 
-The OData route is configured in `src/company_mgmt/Program.cs` with:
+The original `/odata/Branches` entity set is retained for compatibility.
+Sample requests and setup/performance calls are in
+[`samples/odata-requests.http`](./samples/odata-requests.http). Current EDM
+query examples and representative response payloads are in
+[`samples/odata-examples.json`](./samples/odata-examples.json) and
+[`samples/responses/odata-examples.json`](./samples/responses/odata-examples.json).
 
-- `$select`
-- `$filter`
-- `$orderby`
-- `$skip`
-- `$top`, limited to 100 rows
-- `$skiptoken` for server-generated continuation links
+## Benchmark methodology
 
-`$count`, `$expand`, and `$search` are not enabled by the current
-configuration. See `docs/api-details.md` for implementation details.
+Each of the ten documented scenarios is requested five times over HTTP. The
+runner records response status, elapsed request duration, payload bytes,
+dataset row count, minimum, maximum, average, median, and success/failure
+counts. Per-scenario results are persisted in `benchmark_runs`. The expansion
+scenarios intentionally request broad result sets, so they can be expensive
+on the full data set; allow the requests to finish and avoid running multiple
+suites concurrently. These are end-to-end HTTP timings, not isolated database
+execution plans.
 
-## Test a request
+SQL commands and request durations are logged. SQL parameter values are not
+configured for sensitive-data logging. The setup and benchmark APIs are
+administrative demo endpoints and should not be exposed publicly without
+authentication and authorization.
 
-After starting the API, run:
+## .NET migrations and schema ownership
 
-```bash
-curl "http://localhost:5197/odata/Employees?%24filter=Salary%20ge%2070000&%24orderby=Salary%20desc&%24select=Name,Email,Salary&%24top=2"
-```
-
-For the complete request/response checklist, open
-`samples/odata-requests.http` with the Visual Studio or VS Code REST client.
+Entity Framework Core Design and `Data/AppDbContextFactory` support EF tooling
+and migration scaffolding against the model. Application startup does not call
+`EnsureCreated` or `Migrate`: generated schema changes must be represented in
+the version-controlled PostgreSQL scripts, which are the authoritative schema
+and seed source. Apply schema changes via `/api/setup/schema`.

@@ -1,4 +1,4 @@
-﻿using company_mgmt.Data;
+using company_mgmt.Data;
 using company_mgmt.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Formatter;
@@ -15,11 +15,10 @@ public class ProductsController : ODataController {
 
     [EnableQuery]
     [HttpGet("odata/Products")]
-    public IQueryable<Product> Get() =>
-        _context.Products.AsNoTracking().Include(p => p.Branch);
+    public IQueryable<Product> Get() => _context.Products.AsNoTracking();
 
     [EnableQuery]
     [HttpGet("odata/Products({key:int})")]
     public SingleResult<Product> Get([FromODataUri] int key) =>
-        SingleResult.Create(_context.Products.AsNoTracking().Where(p => p.Id == key));
+        SingleResult.Create(_context.Products.AsNoTracking().Where(p => p.ProductId == key));
 }
