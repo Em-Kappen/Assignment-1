@@ -74,6 +74,19 @@ neither is set, the process prompts for it without echo and retains it only in
 memory. It is never written to settings or environment variables by the
 application.
 
+The Development configuration explicitly uses `SslMode=Disable` for local
+PostgreSQL instances that do not have TLS enabled. The base configuration uses
+`VerifyFull`; production can select the desired mode with `Database:SslMode`
+(or `Database__SslMode`). Verified modes require a trusted server certificate
+and matching hostname. The schema setup maintenance connection inherits the
+same configured mode. Design-time EF connections use `Database__SslMode` when
+provided, otherwise honoring the connection string's SSL mode.
+
+The Development launch profile listens on HTTPS for browser traffic; this is
+independent of PostgreSQL transport security. Outside Development, HSTS and
+HTTPS redirection are enabled. Production deployments must configure an HTTPS
+endpoint or a trusted TLS-terminating proxy.
+
 `Data/AppDbContextFactory` and the EF Core Design package allow design-time
 model inspection and migration scaffolding. Generated migration code is not
 applied by the application; persist schema changes through the SQL scripts so
@@ -131,14 +144,16 @@ Benchmark history is capped at the latest 200 scenario rows.
 
 ## UI/API parity
 
-The `/demo` SPA calls database summary APIs; `/demo/setup` calls schema/seed
-setup APIs; `/demo/query` calls the selected OData set directly and supports
-query options, paging, sorting, history, dynamic nested columns, raw JSON,
-copy and download. Query history metadata is stored through
-`POST /api/query-history` and read through `GET /api/query-history`. The
-`/demo/performance` page calls the benchmark-history, benchmark-execution, and
+The `/demo` SPA calls database summary APIs, displays tracked table counts
+excluding `query_history`, and includes a quick reference to database tables
+and columns; `/demo/setup` calls schema/seed setup APIs; `/demo/query` calls the selected OData set directly and supports
+query options, paging, sorting, dynamic nested columns, raw JSON, copy and
+download. The query runner does not display or persist a query history.
+`/demo/performance` calls the benchmark-history, benchmark-execution, and
 index-summary APIs. OData set links are also available on the dashboard and API
-routes are documented in the root README and request sample.
+routes are documented in the root README and request sample. The separate
+`/api/query-history` endpoints remain available for clients that need to store
+query execution metadata.
 
 ## Operational logging and errors
 

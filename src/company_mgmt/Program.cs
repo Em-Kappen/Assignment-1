@@ -64,6 +64,12 @@ app.Use(async (context, next) =>
     }
 });
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
@@ -73,7 +79,7 @@ app.MapControllers();
 app.MapGet("/demo/{**path}", async context =>
 {
     context.Response.ContentType = "text/html; charset=utf-8";
-    await context.Response.SendFileAsync(Path.Combine(app.Environment.WebRootPath, "demo.html"));
+    await context.Response.SendFileAsync(Path.Combine(app.Environment.WebRootPath, "index.html"));
 });
 app.Run();
 
@@ -89,20 +95,27 @@ static string BuildConnectionString(ConfigurationManager configuration)
         dbBuilder.Password = Environment.GetEnvironmentVariable("PGPASSWORD");
     }
 
-    if (string.IsNullOrEmpty(dbBuilder.Password))
+    if (string.IsNullOrEmpty(dbBuilder.Password) && !Console.IsInputRedirected)
     {
-        if (Console.IsInputRedirected)
-            throw new InvalidOperationException("PostgreSQL password is not configured and no interactive console is available.");
-
         Console.Write($"Enter PostgreSQL password for '{dbBuilder.Username}': ");
         dbBuilder.Password = ReadPasswordFromConsole();
         Console.WriteLine();
     }
 
-    if (string.IsNullOrEmpty(dbBuilder.Password))
-        throw new InvalidOperationException("PostgreSQL password is required to connect to the configured database.");
-
     dbBuilder.SearchPath = "public";
+    var sslModeSetting = configuration["Database:SslMode"];
+    if (!string.IsNullOrWhiteSpace(sslModeSetting))
+    {
+        if (!Enum.TryParse<SslMode>(sslModeSetting, ignoreCase: true, out var sslMode) ||
+            !Enum.IsDefined(sslMode))
+        {
+            throw new InvalidOperationException(
+                $"Database:SslMode '{sslModeSetting}' is invalid. Supported values include Disable, Prefer, Require, VerifyCA, and VerifyFull.");
+        }
+
+        dbBuilder.SslMode = sslMode;
+    }
+
     return dbBuilder.ConnectionString;
 }
 

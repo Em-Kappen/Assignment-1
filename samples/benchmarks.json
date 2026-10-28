@@ -1,0 +1,63 @@
+{
+  "description": "Configured benchmark requests plus additional OData requests for focused tests. Request URLs are relative to the application base URL.",
+  "benchmarkScenarios": [
+    {
+      "name": "Customers top 100",
+      "request": "GET /odata/Customers?$top=100"
+    },
+    {
+      "name": "Customers top 1000",
+      "request": "GET /odata/Customers?$top=1000"
+    },
+    {
+      "name": "Electronics products",
+      "request": "GET /odata/Products?$filter=Category%20eq%20%27Electronics%27"
+    },
+    {
+      "name": "IT employees",
+      "request": "GET /odata/Employees?$filter=Department%20eq%20%27IT%27"
+    },
+    {
+      "name": "Top-paid employees",
+      "request": "GET /odata/Employees?$orderby=Salary%20desc&$top=100"
+    },
+    {
+      "name": "Orders with customer",
+      "request": "GET /odata/Orders?$expand=Customer"
+    },
+    {
+      "name": "Orders with items",
+      "request": "GET /odata/Orders?$expand=OrderItems"
+    },
+    {
+      "name": "Orders with customer and items",
+      "request": "GET /odata/Orders?$expand=Customer,OrderItems"
+    },
+    {
+      "name": "Orders with count",
+      "request": "GET /odata/Orders?$count=true"
+    },
+    {
+      "name": "Customers with orders",
+      "request": "GET /odata/Customers?$expand=Orders"
+    }
+  ],
+  "additionalRequests": [
+    {
+      "name": "Orders count only",
+      "request": "GET /odata/Orders?$count=true&$top=0"
+    },
+    {
+      "name": "Paged customers",
+      "request": "GET /odata/Customers?$orderby=CustomerId&$skip=1000&$top=100"
+    },
+    {
+      "name": "Projected Electronics products",
+      "request": "GET /odata/Products?$filter=Category%20eq%20%27Electronics%27&$select=Sku,ProductName,UnitPrice&$count=true&$orderby=ProductId&$top=100"
+    },
+    {
+      "name": "Limited nested order expansion",
+      "request": "GET /odata/Orders?$expand=OrderItems($expand=Product),Customer&$top=50"
+    }
+  ]
+}

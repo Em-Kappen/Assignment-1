@@ -1,4 +1,4 @@
-@baseUrl = http://localhost:5197
+@baseUrl = https://localhost:7046
 
 ### OData metadata (EDM entity sets and navigation properties)
 GET {{baseUrl}}/odata/$metadata

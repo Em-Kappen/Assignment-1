@@ -18,16 +18,25 @@ browser-based query/benchmark console.
    $env:ConnectionStrings__DefaultConnection = "Host=localhost;Port=5432;Database=companydb;Username=postgres"
    ```
 
+   The Development environment explicitly uses `SslMode=Disable` for local
+   PostgreSQL, so no TLS certificate setup is required. The base configuration
+   uses `VerifyFull`; production deployments can set `Database__SslMode` to
+   `VerifyFull`, `VerifyCA`, `Require`, `Prefer`, or `Disable` as appropriate.
+   For verified modes, configure a trusted server certificate and matching
+   hostname. Do not use `Disable` outside trusted local environments.
+
    If `companydb` does not exist, the **Run schema.sql** setup operation creates
    it by connecting to PostgreSQL's maintenance database first. The configured
    user must have `CREATEDB` permission (the `postgres` superuser does by
    default). No application database is created during app startup.
 
    The password can be supplied in the connection string through a secret
-   manager/environment configuration. Otherwise, `dotnet run` prompts once,
-   hides typed characters, and holds the password in process memory only. An
-   existing `PGPASSWORD` environment variable is also honored. No password is
-   written to application settings or exported by the application.
+   manager/environment configuration. Otherwise, `dotnet run` prompts once
+   when an interactive console is available, hides typed characters, and holds
+   the password in process memory only. Press Enter without typing a password
+   to allow local PostgreSQL trust authentication. An existing `PGPASSWORD`
+   environment variable is also honored. No password is written to application
+   settings or exported by the application.
 
 2. From the repository root, start the application:
 
@@ -35,15 +44,27 @@ browser-based query/benchmark console.
    dotnet run --project src\company_mgmt\company_mgmt.csproj
    ```
 
-   The application does not create or seed tables at startup. It starts after
-   connection-string/password configuration; database operations begin when an
-   API call or the UI requests them.
+   The Development launch profile listens on HTTPS at port 7046 only. Trust the
+   local ASP.NET Core development certificate if needed:
 
-3. Open `http://localhost:5197/demo` and choose **Database setup**. Run the
+   ```powershell
+   dotnet dev-certs https --trust
+   ```
+
+   The application does not create or seed tables at startup. Database
+   operations begin when an API call or the UI requests them.
+
+3. Open `https://localhost:7046/demo` and choose **Database setup**. Run the
    schema first (it creates the target database if needed), then the seed. The
    seed creates 100,000 customers, 50,000 products, 500,000 orders, 2,000,000
    order items, and 1,000,000 employees.
    The one-time seed is deterministic and can take several minutes.
+
+   Outside Development, the application enables HSTS and redirects HTTP
+   requests to HTTPS. Configure the deployment's HTTPS listener/certificate
+   (or a trusted TLS-terminating reverse proxy and forwarded-protocol handling)
+   before exposing it. Keep the PostgreSQL certificate trusted and matching
+   the configured database hostname.
 
 ## Database design and scale
 
@@ -78,9 +99,9 @@ large data sets.
 
 | Page/endpoint | Purpose |
 | --- | --- |
-| `/demo` | Database status, counts, size, last benchmark, OData links |
+| `/demo` | Database status, row counts (excluding query history), table/column quick reference, size, last benchmark, OData links |
 | `/demo/setup` | Run `schema.sql` and `seed.sql`, inspect execution results |
-| `/demo/query` | Execute OData queries, view dynamic table/raw JSON, page/sort, copy/download and inspect history |
+| `/demo/query` | Execute OData queries, view dynamic table/raw JSON, page/sort and copy/download responses |
 | `/demo/performance` | Run and review the repeated benchmark suite and database indexes |
 | `POST /api/setup/schema` | Execute idempotent `database/schema.sql` transactionally |
 | `POST /api/setup/seed` | Execute deterministic, guarded `database/seed.sql` transactionally |
@@ -105,8 +126,7 @@ The original `/odata/Branches` entity set is retained for compatibility.
 Sample requests and setup/performance calls are in
 [`samples/odata-requests.http`](./samples/odata-requests.http). Current EDM
 query examples and representative response payloads are in
-[`samples/odata-examples.json`](./samples/odata-examples.json) and
-[`samples/responses/odata-examples.json`](./samples/responses/odata-examples.json).
+[`samples/odata-examples.json`](./samples/odata-examples.json).
 
 ## Benchmark methodology
 

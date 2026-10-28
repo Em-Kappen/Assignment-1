@@ -108,6 +108,25 @@ public sealed class DatabaseSetupService(
                 false,
                 "The configured database does not exist. Run schema setup to create it.");
         }
+        catch (NpgsqlException exception) when (
+            exception.Message.Contains(
+                "No SSL enabled connection from this host is configured",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var databaseName = new NpgsqlConnectionStringBuilder(connection.ConnectionString).Database ?? string.Empty;
+            logger.LogWarning(
+                exception,
+                "PostgreSQL database {DatabaseName} rejected the required TLS connection because SSL is not enabled for this client.",
+                databaseName);
+            return new DatabaseSummary(
+                databaseName,
+                0,
+                Tables.ToDictionary(table => table, _ => 0L, StringComparer.OrdinalIgnoreCase),
+                null,
+                false,
+                false,
+                "The PostgreSQL TLS settings do not match the server. Check Database:SslMode and the server's SSL configuration.");
+        }
         finally
         {
             if (!wasOpen)
