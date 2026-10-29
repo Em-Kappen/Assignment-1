@@ -18,9 +18,10 @@ x86/
 packages/
 
 # Local environment / secrets
-appsettings.Development.json
-appsettings.Local.json
+src\company_mgmt\appsettings.Development.json
+src\company_mgmt\appsettings.Local.json
 secrets.json
+src\company_mgmt\appsettings.json
 
 # Logs
 *.log

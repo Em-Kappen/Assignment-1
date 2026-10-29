@@ -6,8 +6,7 @@ namespace company_mgmt.Controllers;
 [ApiController]
 [Route("api/performance")]
 public sealed class PerformanceController(
-    IDatabaseSetupService setupService,
-    IPerformanceService performanceService) : ControllerBase
+    IDatabaseSetupService setupService) : ControllerBase
 {
     [HttpGet("table-counts")]
     public async Task<ActionResult<Dictionary<string, long>>> GetTableCounts(
@@ -25,13 +24,20 @@ public sealed class PerformanceController(
         Ok(await setupService.GetIndexSummaryAsync(cancellationToken));
 
     [HttpPost("benchmarks")]
-    public async Task<ActionResult<BenchmarkSuiteResult>> RunBenchmarks(
-        CancellationToken cancellationToken) =>
-        Ok(await performanceService.RunBenchmarksAsync(
-            $"{Request.Scheme}://{Request.Host}/", cancellationToken));
+    public IActionResult RunBenchmarks() =>
+        StatusCode(StatusCodes.Status410Gone, new ProblemDetails
+        {
+            Status = StatusCodes.Status410Gone,
+            Title = "Benchmarks are disabled",
+            Detail = "Benchmark persistence is outside the SQL_main Customer, Order, and Product integration."
+        });
 
     [HttpGet("benchmarks")]
-    public async Task<ActionResult<IReadOnlyList<BenchmarkHistoryItem>>> GetBenchmarkHistory(
-        CancellationToken cancellationToken) =>
-        Ok(await performanceService.GetHistoryAsync(cancellationToken));
+    public IActionResult GetBenchmarkHistory() =>
+        StatusCode(StatusCodes.Status410Gone, new ProblemDetails
+        {
+            Status = StatusCodes.Status410Gone,
+            Title = "Benchmark history is unavailable",
+            Detail = "SQL_main benchmark history is not part of this integration."
+        });
 }

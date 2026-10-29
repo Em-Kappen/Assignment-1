@@ -1,25 +1,19 @@
 using System.Diagnostics;
-using System.Text;
 using company_mgmt.Data;
 using company_mgmt.Models;
 using company_mgmt.Services;
 using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OData.ModelBuilder;
-using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = BuildConnectionString(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString, postgres => postgres.CommandTimeout(1800))
+    options.UseSqlServer(connectionString, sqlServer => sqlServer.CommandTimeout(1800))
         .EnableDetailedErrors()
         .LogTo(Console.WriteLine, LogLevel.Information));
 builder.Services.AddScoped<IDatabaseSetupService, DatabaseSetupService>();
-builder.Services.AddScoped<ISeedService, SeedService>();
-builder.Services.AddScoped<IPerformanceService, PerformanceService>();
-builder.Services.AddScoped<IQueryHistoryService, QueryHistoryService>();
-builder.Services.AddHttpClient("Benchmarks", client => client.Timeout = TimeSpan.FromMinutes(30));
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler(options => { });
 builder.Services.AddOpenApi();
@@ -27,10 +21,8 @@ builder.Services.AddOpenApi();
 var modelBuilder = new ODataConventionModelBuilder();
 modelBuilder.EntitySet<Customer>("Customers");
 modelBuilder.EntitySet<Product>("Products");
-modelBuilder.EntitySet<Order>("Orders");
-modelBuilder.EntitySet<OrderItem>("OrderItems");
-modelBuilder.EntitySet<Employee>("Employees");
-modelBuilder.EntitySet<Branch>("Branches");
+modelBuilder.EntitySet<Order>("Orders").EntityType.HasKey(order => order.SalesOrderGenerationId);
+modelBuilder.EntitySet<OrderItem>("OrderItems").EntityType.HasKey(item => item.SalesOrderLineGenerationId);
 
 builder.Services.AddControllers().AddOData(options =>
 {
@@ -85,55 +77,7 @@ app.Run();
 
 static string BuildConnectionString(ConfigurationManager configuration)
 {
-    var rawConnectionString = configuration.GetConnectionString("DefaultConnection")
+    return configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException(
             "ConnectionStrings:DefaultConnection must be configured before starting the application.");
-    var dbBuilder = new NpgsqlConnectionStringBuilder(rawConnectionString);
-    if (string.IsNullOrEmpty(dbBuilder.Password) &&
-        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PGPASSWORD")))
-    {
-        dbBuilder.Password = Environment.GetEnvironmentVariable("PGPASSWORD");
-    }
-
-    if (string.IsNullOrEmpty(dbBuilder.Password) && !Console.IsInputRedirected)
-    {
-        Console.Write($"Enter PostgreSQL password for '{dbBuilder.Username}': ");
-        dbBuilder.Password = ReadPasswordFromConsole();
-        Console.WriteLine();
-    }
-
-    dbBuilder.SearchPath = "public";
-    var sslModeSetting = configuration["Database:SslMode"];
-    if (!string.IsNullOrWhiteSpace(sslModeSetting))
-    {
-        if (!Enum.TryParse<SslMode>(sslModeSetting, ignoreCase: true, out var sslMode) ||
-            !Enum.IsDefined(sslMode))
-        {
-            throw new InvalidOperationException(
-                $"Database:SslMode '{sslModeSetting}' is invalid. Supported values include Disable, Prefer, Require, VerifyCA, and VerifyFull.");
-        }
-
-        dbBuilder.SslMode = sslMode;
-    }
-
-    return dbBuilder.ConnectionString;
-}
-
-static string ReadPasswordFromConsole()
-{
-    var password = new StringBuilder();
-    while (true)
-    {
-        var key = Console.ReadKey(intercept: true);
-        if (key.Key == ConsoleKey.Enter)
-            return password.ToString();
-        if (key.Key == ConsoleKey.Backspace)
-        {
-            if (password.Length > 0)
-                password.Length--;
-            continue;
-        }
-        if (key.KeyChar != '\0')
-            password.Append(key.KeyChar);
-    }
 }

@@ -1,0 +1,78 @@
+[
+  {
+    "description": "Browse customers with only directory fields",
+    "url": "https://localhost:7046/odata/Customers?$select=CustomerId,Name,City,State,CountryCode&$orderby=Name&$top=100"
+  },
+  {
+    "description": "Find customers in a city",
+    "url": "https://localhost:7046/odata/Customers?$filter=contains(City,'Seattle')&$select=CustomerId,Name,City,State,CountryCode&$orderby=Name&$top=50"
+  },
+  {
+    "description": "List bill-to customer accounts",
+    "url": "https://localhost:7046/odata/Customers?$filter=IsBillTo%20eq%20true&$select=CustomerId,Name,City,State,CountryCode&$orderby=Name&$top=100"
+  },
+  {
+    "description": "Find ship-to locations belonging to a bill-to account",
+    "url": "https://localhost:7046/odata/Customers?$filter=BillToId%20eq%2042&$select=CustomerId,Name,AddressLine1,City,State,PostalCode,BillToId&$expand=BillToCustomer($select=CustomerId,Name)&$top=100"
+  },
+  {
+    "description": "Retrieve a customer profile with order, line, and product details",
+    "url": "https://localhost:7046/odata/Customers(42)?$select=CustomerId,Name,AddressLine1,AddressLine2,City,State,PostalCode,CountryCode&$expand=Orders($select=SalesOrderGenerationId,OrderDate,StatusCode,SalesTotal,PriceTotal;$expand=OrderItems($select=SalesOrderLineGenerationId,LineId,ShipQty,StockQty,NonstockQty,Price,TaxAmount;$expand=Product($select=ProductId,Description,CatalogNumber,ProductStatusId)))"
+  },
+  {
+    "description": "Find customers with an order on or after a date",
+    "url": "https://localhost:7046/odata/Customers?$filter=Orders/any(o:o/OrderDate%20ge%202026-01-01)&$select=CustomerId,Name,City,State&$orderby=Name&$top=100"
+  },
+  {
+    "description": "List orders billed to a customer",
+    "url": "https://localhost:7046/odata/Orders?$filter=BillToId%20eq%2042&$select=SalesOrderGenerationId,SalesOrderId,GenerationId,OrderDate,StatusCode,SalesTotal&$orderby=OrderDate%20desc&$top=100"
+  },
+  {
+    "description": "List orders shipping to a customer location",
+    "url": "https://localhost:7046/odata/Orders?$filter=ShipToId%20eq%2042&$select=SalesOrderGenerationId,SalesOrderId,GenerationId,ShipToId,OrderDate,RequiredDate,ShipDate,StatusCode&$orderby=RequiredDate&$top=100"
+  },
+  {
+    "description": "Review orders placed within a date range",
+    "url": "https://localhost:7046/odata/Orders?$filter=OrderDate%20ge%202026-01-01%20and%20OrderDate%20lt%202026-02-01&$select=SalesOrderGenerationId,OrderDate,StatusCode,SalesTotal,PriceTotal&$orderby=OrderDate%20desc&$top=100"
+  },
+  {
+    "description": "Find orders with a required date that have not shipped",
+    "url": "https://localhost:7046/odata/Orders?$filter=ShipDate%20eq%20null%20and%20RequiredDate%20ne%20null&$select=SalesOrderGenerationId,SalesOrderId,OrderDate,RequiredDate,ShipToId,StatusCode&$orderby=RequiredDate&$top=100"
+  },
+  {
+    "description": "Look up an order by invoice number",
+    "url": "https://localhost:7046/odata/Orders?$filter=InvoiceNumber%20eq%2012345&$select=SalesOrderGenerationId,SalesOrderId,InvoiceNumber,OrderDate,ShipDate,StatusCode,SalesTotal&$top=20"
+  },
+  {
+    "description": "Look up orders using a customer purchase-order number",
+    "url": "https://localhost:7046/odata/Orders?$filter=PoNumber%20eq%20'PO-12345'&$select=SalesOrderGenerationId,SalesOrderId,PoNumber,OrderDate,StatusCode,SalesTotal&$top=20"
+  },
+  {
+    "description": "Retrieve one order generation with bill-to, ship-to, lines, and products",
+    "url": "https://localhost:7046/odata/Orders('ORDER-GENERATION-ID')?$select=SalesOrderGenerationId,SalesOrderId,GenerationId,OrderDate,RequiredDate,ShipDate,StatusCode,InvoiceNumber,PoNumber,SalesTotal,PriceTotal&$expand=Customer($select=CustomerId,Name),ShipToCustomer($select=CustomerId,Name,City,State),OrderItems($select=SalesOrderLineGenerationId,LineId,ShipQty,StockQty,NonstockQty,Price,OriginalPrice,TaxAmount;$expand=Product($select=ProductId,Description,CatalogNumber,ProductStatusId))"
+  },
+  {
+    "description": "Browse the product catalog",
+    "url": "https://localhost:7046/odata/Products?$select=ProductId,Description,AlternateDescription,CatalogNumber,ProductStatusId&$orderby=Description&$top=100"
+  },
+  {
+    "description": "Search the catalog by catalog-number prefix",
+    "url": "https://localhost:7046/odata/Products?$filter=startswith(CatalogNumber,'ABC')&$select=ProductId,Description,CatalogNumber,ProductStatusId&$orderby=CatalogNumber&$top=50"
+  },
+  {
+    "description": "Filter products by a product-status ID (use a value defined by the business)",
+    "url": "https://localhost:7046/odata/Products?$filter=ProductStatusId%20eq%201&$select=ProductId,Description,CatalogNumber,ProductStatusId&$top=100"
+  },
+  {
+    "description": "Find products that appear on order lines and review their order history",
+    "url": "https://localhost:7046/odata/Products?$filter=OrderItems/any()&$select=ProductId,Description,CatalogNumber&$expand=OrderItems($select=ShipQty,Price;$expand=Order($select=SalesOrderGenerationId,OrderDate,StatusCode))&$top=50"
+  },
+  {
+    "description": "Review order lines with their product and parent-order details",
+    "url": "https://localhost:7046/odata/OrderItems?$select=SalesOrderLineGenerationId,LineId,ShipQty,StockQty,NonstockQty,Price,TaxAmount&$expand=Product($select=ProductId,Description,CatalogNumber),Order($select=SalesOrderGenerationId,OrderDate,StatusCode)&$top=100"
+  },
+  {
+    "description": "Count customers without returning customer records",
+    "url": "https://localhost:7046/odata/Customers?$count=true&$select=CustomerId&$top=0"
+  }
+]

@@ -2,15 +2,20 @@ namespace company_mgmt.Models;
 
 public class Order
 {
-    public int OrderId { get; set; }
-    public int CustomerId { get; set; }
-    public string OrderNumber { get; set; } = "";
-    public DateTime OrderDate { get; set; }
-    public string OrderStatus { get; set; } = "";
-    public decimal Subtotal { get; set; }
-    public decimal TaxAmount { get; set; }
-    public decimal ShippingAmount { get; set; }
-    public decimal TotalAmount { get; set; }
+    public string SalesOrderGenerationId { get; set; } = "";
+    public string? SalesOrderId { get; set; }
+    public int? GenerationId { get; set; }
+    public int? BillToId { get; set; }
+    public int? ShipToId { get; set; }
+    public DateOnly? OrderDate { get; set; }
+    public string? StatusCode { get; set; }
+    public int? InvoiceNumber { get; set; }
+    public DateOnly? ShipDate { get; set; }
+    public DateOnly? RequiredDate { get; set; }
+    public string? PoNumber { get; set; }
+    public decimal? SalesTotal { get; set; }
+    public decimal? PriceTotal { get; set; }
     public Customer? Customer { get; set; }
+    public Customer? ShipToCustomer { get; set; }
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 }

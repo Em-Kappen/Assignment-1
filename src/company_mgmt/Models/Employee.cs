@@ -15,5 +15,5 @@ public class Employee
     public int BranchId { get; set; }
     public Employee? Manager { get; set; }
     public ICollection<Employee> DirectReports { get; set; } = new List<Employee>();
-    public Branch? BranchOffice { get; set; }
+    public Branch BranchOffice { get; set; } = null!;
 }

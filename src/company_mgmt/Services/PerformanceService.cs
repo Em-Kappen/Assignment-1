@@ -105,14 +105,14 @@ public sealed class PerformanceService(
             results.Add(result);
             await context.Database.ExecuteSqlInterpolatedAsync(
                 $"""
-                 INSERT INTO public.benchmark_runs
+                 INSERT INTO dbo.benchmark_runs
                  (scenario, endpoint, executed_at, dataset_size, min_duration_ms, max_duration_ms,
                   average_duration_ms, median_duration_ms, success_count, failure_count, payload_bytes, status_codes)
                  VALUES ({result.Scenario}, {result.Endpoint}, {DateTimeOffset.UtcNow}, {dataset},
                          {result.MinimumMilliseconds}, {result.MaximumMilliseconds},
                          {result.AverageMilliseconds}, {result.MedianMilliseconds},
                          {result.SuccessCount}, {result.FailureCount}, {result.PayloadBytes},
-                         CAST({JsonSerializer.Serialize(statuses)} AS jsonb))
+                         {JsonSerializer.Serialize(statuses)})
                  """,
                 cancellationToken);
             logger.LogInformation(
@@ -127,15 +127,14 @@ public sealed class PerformanceService(
     {
         var rows = await context.Database.SqlQuery<BenchmarkHistoryItem>(
                 $"""
-                 SELECT benchmark_run_id AS "Id", scenario AS "Scenario", endpoint AS "Endpoint",
-                        executed_at AS "ExecutedAt", dataset_size AS "DatasetSize",
-                        min_duration_ms AS "MinimumMilliseconds", max_duration_ms AS "MaximumMilliseconds",
-                        average_duration_ms AS "AverageMilliseconds", median_duration_ms AS "MedianMilliseconds",
-                        success_count AS "SuccessCount", failure_count AS "FailureCount", payload_bytes AS "PayloadBytes",
-                        status_codes::text AS "StatusCodesJson"
-                 FROM public.benchmark_runs
+                 SELECT TOP (200) benchmark_run_id AS [Id], scenario AS [Scenario], endpoint AS [Endpoint],
+                        executed_at AS [ExecutedAt], dataset_size AS [DatasetSize],
+                        min_duration_ms AS [MinimumMilliseconds], max_duration_ms AS [MaximumMilliseconds],
+                        average_duration_ms AS [AverageMilliseconds], median_duration_ms AS [MedianMilliseconds],
+                        success_count AS [SuccessCount], failure_count AS [FailureCount], payload_bytes AS [PayloadBytes],
+                        status_codes AS [StatusCodesJson]
+                 FROM dbo.benchmark_runs
                  ORDER BY executed_at DESC
-                 LIMIT 200
                  """)
             .ToListAsync(cancellationToken);
         return rows;

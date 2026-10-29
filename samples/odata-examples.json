@@ -1,98 +1,102 @@
 {
-  "description": "Examples use the current Company Management EDM. Sample values below are deterministic seed examples, not a live database response.",
+  "description": "Examples use the SQL_main eclipse schema. IDs and values are illustrative placeholders, not copied database records.",
   "odataSets": {
     "Customers": {
-      "request": "GET /odata/Customers?$filter=Country eq 'USA'&$select=CustomerNumber,FirstName,LastName,Email&$orderby=CustomerId&$top=1",
-      "response": {
-        "@odata.context": "$metadata#Customers(CustomerNumber,FirstName,LastName,Email)",
+      "request": "GET /odata/Customers?$select=CustomerId,Name,City,State,CountryCode&$orderby=CustomerId&$top=1",
+      "responseShape": {
+        "@odata.context": "$metadata#Customers(CustomerId,Name,City,State,CountryCode)",
         "value": [
           {
-            "CustomerNumber": "CUST-00000001",
-            "FirstName": "Avery",
-            "LastName": "Singh",
-            "Email": "customer1@example.test"
+            "CustomerId": 42,
+            "Name": "<customer name>",
+            "City": "<city>",
+            "State": "<state>",
+            "CountryCode": "<country code>"
+          }
+        ]
+      }
+    },
+    "CustomerProfile": {
+      "request": "GET /odata/Customers(42)?$select=CustomerId,Name,AddressLine1,City,State,PostalCode,CountryCode&$expand=Orders($select=SalesOrderGenerationId,OrderDate,StatusCode,SalesTotal;$expand=OrderItems($select=SalesOrderLineGenerationId,LineId,ShipQty,Price;$expand=Product($select=ProductId,Description,CatalogNumber)))",
+      "responseShape": {
+        "@odata.context": "$metadata#Customers(CustomerId,Name,AddressLine1,City,State,PostalCode,CountryCode,Orders(SalesOrderGenerationId,OrderDate,StatusCode,SalesTotal,OrderItems(SalesOrderLineGenerationId,LineId,ShipQty,Price,Product(ProductId,Description,CatalogNumber))))/$entity",
+        "CustomerId": 42,
+        "Name": "<customer name>",
+        "AddressLine1": "<address>",
+        "City": "<city>",
+        "State": "<state>",
+        "PostalCode": "<postal code>",
+        "CountryCode": "<country code>",
+        "Orders": [
+          {
+            "SalesOrderGenerationId": "<order-generation key>",
+            "OrderDate": "2026-01-15",
+            "StatusCode": "<status>",
+            "SalesTotal": 125.5,
+            "OrderItems": [
+              {
+                "SalesOrderLineGenerationId": "<order-line-generation key>",
+                "LineId": 1,
+                "ShipQty": 2,
+                "Price": 62.75,
+                "Product": {
+                  "ProductId": 7,
+                  "Description": "<product description>",
+                  "CatalogNumber": "<catalog number>"
+                }
+              }
+            ]
           }
         ]
       }
     },
     "Products": {
-      "request": "GET /odata/Products?$filter=Category eq 'Electronics'&$select=Sku,ProductName,Category,UnitPrice&$orderby=ProductId&$top=1",
-      "response": {
-        "@odata.context": "$metadata#Products(Sku,ProductName,Category,UnitPrice)",
+      "request": "GET /odata/Products?$select=ProductId,Description,CatalogNumber,ProductStatusId&$top=1",
+      "responseShape": {
+        "@odata.context": "$metadata#Products(ProductId,Description,CatalogNumber,ProductStatusId)",
         "value": [
           {
-            "Sku": "SKU-0000002",
-            "ProductName": "Smart Display 2",
-            "Category": "Electronics",
-            "UnitPrice": 6.45
-          }
-        ]
-      }
-    },
-    "Employees": {
-      "request": "GET /odata/Employees?$filter=EmployeeNumber eq 'EMP-00000005'&$select=EmployeeNumber,FirstName,LastName,Department,Salary&$top=1",
-      "response": {
-        "@odata.context": "$metadata#Employees(EmployeeNumber,FirstName,LastName,Department,Salary)",
-        "value": [
-          {
-            "EmployeeNumber": "EMP-00000005",
-            "FirstName": "Jamie",
-            "LastName": "Smith",
-            "Department": "IT",
-            "Salary": 40006.85
+            "ProductId": 7,
+            "Description": "<product description>",
+            "CatalogNumber": "<catalog number>",
+            "ProductStatusId": 1
           }
         ]
       }
     },
     "Orders": {
-      "request": "GET /odata/Orders?$expand=Customer,OrderItems($expand=Product)&$count=true&$orderby=OrderId&$top=1",
+      "request": "GET /odata/Orders('ORDER-GENERATION-ID')?$select=SalesOrderGenerationId,OrderDate,StatusCode,SalesTotal&$expand=Customer($select=CustomerId,Name),OrderItems($select=SalesOrderLineGenerationId,LineId,ShipQty,Price;$expand=Product($select=ProductId,Description,CatalogNumber))",
       "responseShape": {
-        "@odata.context": "$metadata#Orders(Customer(),OrderItems(Product()))",
-        "@odata.count": 500000,
-        "value": [
+        "@odata.context": "$metadata#Orders(SalesOrderGenerationId,OrderDate,StatusCode,SalesTotal,Customer(CustomerId,Name),OrderItems(SalesOrderLineGenerationId,LineId,ShipQty,Price,Product(ProductId,Description,CatalogNumber)))/$entity",
+        "SalesOrderGenerationId": "<order-generation key>",
+        "OrderDate": "2026-01-15",
+        "StatusCode": "<status>",
+        "SalesTotal": 125.5,
+        "Customer": {
+          "CustomerId": 42,
+          "Name": "<customer name>"
+        },
+        "OrderItems": [
           {
-            "OrderId": 1,
-            "CustomerId": 7919,
-            "OrderNumber": "ORD-000000001",
-            "OrderDate": "2021-01-08T00:00:00",
-            "OrderStatus": "Shipped",
-            "Subtotal": 11965.60,
-            "TaxAmount": 987.16,
-            "ShippingAmount": 9.95,
-            "TotalAmount": 12962.71,
-            "Customer": {
-              "CustomerId": 7919,
-              "CustomerNumber": "CUST-00007919"
-            },
-            "OrderItems": [
-              {
-                "OrderItemId": 1,
-                "ProductId": 1004,
-                "Quantity": 5,
-                "UnitPrice": 737.91,
-                "LineTotal": 3689.55,
-                "Product": {
-                  "ProductId": 1004,
-                  "Sku": "SKU-0001004",
-                  "ProductName": "Storage Drive 1004"
-                }
-              }
-            ]
+            "SalesOrderLineGenerationId": "<order-line-generation key>",
+            "LineId": 1,
+            "ShipQty": 2,
+            "Price": 62.75,
+            "Product": {
+              "ProductId": 7,
+              "Description": "<product description>",
+              "CatalogNumber": "<catalog number>"
+            }
           }
-        ],
-        "note": "Abbreviated example: each seeded order has four order items."
+        ]
       }
     },
     "OrderItems": {
-      "request": "GET /odata/OrderItems?$expand=Order,Product&$top=100",
+      "request": "GET /odata/OrderItems?$select=SalesOrderLineGenerationId,ShipQty,Price&$expand=Product($select=ProductId,Description,CatalogNumber)&$top=100",
       "navigationProperties": [
         "Order",
         "Product"
       ]
-    },
-    "Branches": {
-      "request": "GET /odata/Branches?$top=100",
-      "note": "Retained for compatibility with the earlier branch demo."
     }
   },
   "queryOptions": [

@@ -1,93 +1,81 @@
-@baseUrl = https://localhost:7046
+@baseUrl = https://localhost:7046/odata
 
-### OData metadata (EDM entity sets and navigation properties)
-GET {{baseUrl}}/odata/$metadata
+### OData metadata (Customer, Order, OrderItem and Product entity sets)
+GET {{baseUrl}}/$metadata
 Accept: application/xml
 
-### Customers
-GET {{baseUrl}}/odata/Customers?$top=100
+### Customer directory
+GET {{baseUrl}}/Customers?$select=CustomerId,Name,City,State,CountryCode&$orderby=Name&$top=100
 Accept: application/json
 
-### Product filtering, projection and result count
-GET {{baseUrl}}/odata/Products?$filter=Category%20eq%20%27Electronics%27&$select=Sku,ProductName,UnitPrice&$count=true&$orderby=ProductId&$top=100
+### Find customers in a city
+GET {{baseUrl}}/Customers?$filter=contains(City,'Seattle')&$select=CustomerId,Name,City,State,CountryCode&$orderby=Name&$top=50
 Accept: application/json
 
-### Customer country filter, count and paging
-GET {{baseUrl}}/odata/Customers?$filter=Country%20eq%20%27USA%27&$count=true&$orderby=CustomerId&$skip=0&$top=100
+### Bill-to accounts
+GET {{baseUrl}}/Customers?$filter=IsBillTo%20eq%20true&$select=CustomerId,Name,City,State,CountryCode&$orderby=Name&$top=100
 Accept: application/json
 
-### Product projection and category filtering
-GET {{baseUrl}}/odata/Products?$filter=Category%20eq%20%27Electronics%27&$select=ProductName,UnitPrice,Category&$orderby=ProductId&$top=100
+### Ship-to locations for a bill-to account
+GET {{baseUrl}}/Customers?$filter=BillToId%20eq%2042&$select=CustomerId,Name,AddressLine1,City,State,PostalCode,BillToId&$expand=BillToCustomer($select=CustomerId,Name)&$top=100
 Accept: application/json
 
-### Employee filter, sorting and projection
-GET {{baseUrl}}/odata/Employees?$filter=Department%20eq%20%27IT%27&$orderby=Salary%20desc&$select=FirstName,LastName,Department,Salary&$top=100
+### Customer profile and nested order history
+GET {{baseUrl}}/Customers(42)?$select=CustomerId,Name,AddressLine1,AddressLine2,City,State,PostalCode,CountryCode&$expand=Orders($select=SalesOrderGenerationId,OrderDate,StatusCode,SalesTotal,PriceTotal;$expand=OrderItems($select=SalesOrderLineGenerationId,LineId,ShipQty,StockQty,NonstockQty,Price,TaxAmount;$expand=Product($select=ProductId,Description,CatalogNumber,ProductStatusId)))
 Accept: application/json
 
-### Employee manager hierarchy
-GET {{baseUrl}}/odata/Employees?$expand=Manager&$top=25
+### Customers with orders on or after a date
+GET {{baseUrl}}/Customers?$filter=Orders/any(o:o/OrderDate%20ge%202026-01-01)&$select=CustomerId,Name,City,State&$orderby=Name&$top=100
 Accept: application/json
 
-### Employee branch relation
-GET {{baseUrl}}/odata/Employees?$expand=BranchOffice&$top=25
+### Orders billed to a customer
+GET {{baseUrl}}/Orders?$filter=BillToId%20eq%2042&$select=SalesOrderGenerationId,SalesOrderId,GenerationId,OrderDate,StatusCode,SalesTotal&$orderby=OrderDate%20desc&$top=100
 Accept: application/json
 
-### Orders with customer and order items
-GET {{baseUrl}}/odata/Orders?$expand=Customer,OrderItems&$top=100
+### Orders shipping to a customer location
+GET {{baseUrl}}/Orders?$filter=ShipToId%20eq%2042&$select=SalesOrderGenerationId,SalesOrderId,GenerationId,ShipToId,OrderDate,RequiredDate,ShipDate,StatusCode&$orderby=RequiredDate&$top=100
 Accept: application/json
 
-### Orders with nested product data
-GET {{baseUrl}}/odata/Orders?$expand=OrderItems($expand=Product),Customer&$top=50
+### Orders placed in a date range
+GET {{baseUrl}}/Orders?$filter=OrderDate%20ge%202026-01-01%20and%20OrderDate%20lt%202026-02-01&$select=SalesOrderGenerationId,OrderDate,StatusCode,SalesTotal,PriceTotal&$orderby=OrderDate%20desc&$top=100
 Accept: application/json
 
-### Customer orders
-GET {{baseUrl}}/odata/Customers?$expand=Orders&$count=true&$top=20
+### Orders with a required date that have not shipped
+GET {{baseUrl}}/Orders?$filter=ShipDate%20eq%20null%20and%20RequiredDate%20ne%20null&$select=SalesOrderGenerationId,SalesOrderId,OrderDate,RequiredDate,ShipToId,StatusCode&$orderby=RequiredDate&$top=100
 Accept: application/json
 
-### Order items
-GET {{baseUrl}}/odata/OrderItems?$expand=Product,Order&$top=100
+### Look up an order by invoice number
+GET {{baseUrl}}/Orders?$filter=InvoiceNumber%20eq%2012345&$select=SalesOrderGenerationId,SalesOrderId,InvoiceNumber,OrderDate,ShipDate,StatusCode,SalesTotal&$top=20
 Accept: application/json
 
-### Branch compatibility endpoint
-GET {{baseUrl}}/odata/Branches?$top=100
+### Look up orders using a customer purchase-order number
+GET {{baseUrl}}/Orders?$filter=PoNumber%20eq%20'PO-12345'&$select=SalesOrderGenerationId,SalesOrderId,PoNumber,OrderDate,StatusCode,SalesTotal&$top=20
 Accept: application/json
 
-### Create or upgrade schema
-POST {{baseUrl}}/api/setup/schema
+### One order generation with bill-to, ship-to, lines, and products
+GET {{baseUrl}}/Orders('ORDER-GENERATION-ID')?$select=SalesOrderGenerationId,SalesOrderId,GenerationId,OrderDate,RequiredDate,ShipDate,StatusCode,InvoiceNumber,PoNumber,SalesTotal,PriceTotal&$expand=Customer($select=CustomerId,Name),ShipToCustomer($select=CustomerId,Name,City,State),OrderItems($select=SalesOrderLineGenerationId,LineId,ShipQty,StockQty,NonstockQty,Price,OriginalPrice,TaxAmount;$expand=Product($select=ProductId,Description,CatalogNumber,ProductStatusId))
+Accept: application/json
 
-### Seed benchmark data (run schema first)
-POST {{baseUrl}}/api/setup/seed
+### Product catalog
+GET {{baseUrl}}/Products?$select=ProductId,Description,AlternateDescription,CatalogNumber,ProductStatusId&$orderby=Description&$top=100
+Accept: application/json
 
-### Table counts
-GET {{baseUrl}}/api/performance/table-counts
+### Search products by catalog-number prefix
+GET {{baseUrl}}/Products?$filter=startswith(CatalogNumber,'ABC')&$select=ProductId,Description,CatalogNumber,ProductStatusId&$orderby=CatalogNumber&$top=50
+Accept: application/json
 
-### Database size and latest benchmark
-GET {{baseUrl}}/api/performance/database-summary
+### Filter by a product-status ID (use a value defined by the business)
+GET {{baseUrl}}/Products?$filter=ProductStatusId%20eq%201&$select=ProductId,Description,CatalogNumber,ProductStatusId&$top=100
+Accept: application/json
 
-### Indexes
-GET {{baseUrl}}/api/performance/index-summary
+### Products with order-line history
+GET {{baseUrl}}/Products?$filter=OrderItems/any()&$select=ProductId,Description,CatalogNumber&$expand=OrderItems($select=ShipQty,Price;$expand=Order($select=SalesOrderGenerationId,OrderDate,StatusCode))&$top=50
+Accept: application/json
 
-### Execute ten benchmark scenarios, five runs each
-POST {{baseUrl}}/api/performance/benchmarks
+### Order lines with product and parent-order details
+GET {{baseUrl}}/OrderItems?$select=SalesOrderLineGenerationId,LineId,ShipQty,StockQty,NonstockQty,Price,TaxAmount&$expand=Product($select=ProductId,Description,CatalogNumber),Order($select=SalesOrderGenerationId,OrderDate,StatusCode)&$top=100
+Accept: application/json
 
-### Benchmark history
-GET {{baseUrl}}/api/performance/benchmarks
-
-### Persisted query history
-GET {{baseUrl}}/api/query-history
-
-### Query history by id
-GET {{baseUrl}}/api/query-history/1
-
-### Record a UI query
-POST {{baseUrl}}/api/query-history
-Content-Type: application/json
-
-{
-  "entitySet": "Customers",
-  "requestUrl": "/odata/Customers?$top=100",
-  "durationMilliseconds": 12.5,
-  "payloadBytes": 2048,
-  "httpStatusCode": 200,
-  "resultCount": 100
-}
+### Customer count only
+GET {{baseUrl}}/Customers?$count=true&$select=CustomerId&$top=0
+Accept: application/json

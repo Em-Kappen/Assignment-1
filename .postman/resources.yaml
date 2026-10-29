@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: 57655d32-2ecc-4800-860c-c6712b061756
+
+localResources:
+  specs:
+    - ../src/company_mgmt/obj/Debug/net10.0/EndpointInfo/company_mgmt.json

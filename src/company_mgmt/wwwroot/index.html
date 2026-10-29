@@ -42,9 +42,7 @@
   <h1>Company Data Demonstration</h1>
   <nav>
     <a href="/" data-page="dashboard">Dashboard</a>
-    <a href="/demo/setup" data-page="setup">Database setup</a>
     <a href="/demo/query" data-page="query">OData query runner</a>
-    <a href="/demo/performance" data-page="performance">Performance</a>
   </nav>
 </header>
 <main>
@@ -55,23 +53,10 @@
       <div class="card"><div class="muted">Schema</div><div class="metric" id="schema-state">—</div></div>
       <div class="card"><div class="muted">Database size</div><div class="metric" id="db-size">—</div></div>
       <div class="card"><div class="muted">Rows (tracked tables)</div><div class="metric" id="total-rows">—</div></div>
-      <div class="card"><div class="muted">Last benchmark</div><div class="metric" id="last-benchmark">—</div></div>
     </div>
     <div class="card"><h3>Table row counts</h3><div id="counts" class="table-wrap">Loading…</div></div>
     <div class="card"><h3>Database table quick reference</h3><div id="table-reference" class="table-wrap"></div></div>
     <div class="card"><h3>OData endpoints</h3><ul id="endpoints"></ul></div>
-  </section>
-
-  <section id="setup" class="page hidden">
-    <h2>Database setup</h2>
-    <div class="card">
-      <p>Schema and deterministic benchmark data are managed by the versioned SQL scripts. Schema and seed operations are safe to retry.</p>
-      <button id="schema-button">Run schema.sql</button>
-      <button id="seed-button">Run seed.sql</button>
-      <p id="setup-state" class="muted">Ready.</p>
-      <div id="setup-counts" class="table-wrap"></div>
-      <h3>Execution log</h3><pre id="setup-log">No setup operation run in this session.</pre>
-    </div>
   </section>
 
   <section id="query" class="page hidden">
@@ -79,15 +64,14 @@
     <div class="card">
       <label for="entity">Entity set</label>
       <select id="entity">
-        <option>Customers</option><option>Products</option><option>Orders</option>
-        <option>OrderItems</option><option>Employees</option><option>Branches</option>
+        <option>Customers</option><option>Products</option><option>Orders</option><option>OrderItems</option>
       </select>
-      <label for="query-text">OData query options (example: $expand=Customer,OrderItems&amp;$top=100)</label>
+      <label for="query-text">OData query options (example: $select=ProductId,Description&amp;$top=100)</label>
       <textarea id="query-text" spellcheck="false">$top=100</textarea>
       <div class="grid">
         <div><label for="page-size">Page size ($top)</label><input id="page-size" type="number" min="1" max="10000" placeholder="Use query value"></div>
         <div><label for="page-skip">Rows to skip ($skip)</label><input id="page-skip" type="number" min="0" placeholder="0"></div>
-        <div><label for="sort-order">Sort ($orderby)</label><input id="sort-order" placeholder="Salary desc"></div>
+        <div><label for="sort-order">Sort ($orderby)</label><input id="sort-order" placeholder="ProductId"></div>
       </div>
       <div class="toolbar">
         <button id="execute-query">Execute query</button>
@@ -106,23 +90,12 @@
     <div class="card hidden" id="json-card"><h3>Raw JSON response</h3><pre id="query-json"></pre></div>
   </section>
 
-  <section id="performance" class="page hidden">
-    <h2>Performance benchmarks</h2>
-    <div class="card">
-      <p>Runs the ten documented OData scenarios five times each. Expansion scenarios intentionally exercise larger result payloads.</p>
-      <button id="run-benchmarks">Run all benchmarks (50 requests)</button>
-      <span id="benchmark-state" class="muted"></span>
-      <div id="benchmark-overview" class="grid"></div>
-    </div>
-    <div class="card"><h3>Benchmark history</h3><div id="benchmark-history" class="table-wrap"></div></div>
-    <div class="card"><h3>Database indexes</h3><div id="index-summary" class="table-wrap"></div></div>
-  </section>
 </main>
 <script>
 (() => {
-  const endpoints = ["Customers", "Products", "Orders", "OrderItems", "Employees"];
+  const endpoints = ["Customers", "Products", "Orders", "OrderItems"];
   const page = location.pathname.split("/").filter(Boolean)[1] || "dashboard";
-  const activePage = ["setup", "query", "performance"].includes(page) ? page : "dashboard";
+  const activePage = page === "query" ? "query" : "dashboard";
   document.querySelectorAll(".page").forEach(section => section.classList.toggle("hidden", section.id !== activePage));
   document.querySelectorAll("nav a").forEach(link => link.classList.toggle("active", link.dataset.page === activePage));
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
@@ -137,14 +110,10 @@
   };
   const byteSize = text => new Blob([text]).size;
   const tableReference = [
-    { table: "branches", purpose: "Branch offices assigned to employees and products.", columns: "branch_id, name, city" },
-    { table: "customers", purpose: "Customer contact and address details.", columns: "customer_id, customer_number, first_name, last_name, email, phone, address_line1, city, state, country, created_date, is_active" },
-    { table: "products", purpose: "Product catalog, pricing, stock, and branch assignment.", columns: "product_id, sku, product_name, category, description, unit_price, stock_quantity, created_date, is_active, branch_id" },
-    { table: "orders", purpose: "Customer orders, status, and financial totals.", columns: "order_id, customer_id, order_number, order_date, order_status, subtotal, tax_amount, shipping_amount, total_amount" },
-    { table: "order_items", purpose: "Products and quantities included in each order.", columns: "order_item_id, order_id, product_id, quantity, unit_price, line_total" },
-    { table: "employees", purpose: "Employee details, reporting hierarchy, salary, and branch.", columns: "employee_id, employee_number, first_name, last_name, department, designation, manager_id, salary, hire_date, branch, branch_id" },
-    { table: "benchmark_runs", purpose: "Timing, status, and payload metrics for benchmark scenarios.", columns: "benchmark_run_id, scenario, endpoint, executed_at, dataset_size, min_duration_ms, max_duration_ms, average_duration_ms, median_duration_ms, success_count, failure_count, payload_bytes, status_codes" },
-    { table: "database_metadata", purpose: "Key/value metadata used to track database setup and seed state.", columns: "key, value, updated_at" }
+    { table: "eclipse.customer", purpose: "Existing customer, bill-to, and ship-to records.", columns: "customer_id, name, address_line1, address_line2, address_line3, address_line4, city, state, postal_code, country_code, is_bill_to, is_ship_to, bill_to_id" },
+    { table: "eclipse.product", purpose: "Existing product catalog records.", columns: "product_id, description, alternate_description, catalog_number, product_status_id" },
+    { table: "eclipse.sales_order_generation", purpose: "Order header and generation records.", columns: "sales_order_generation_id, sales_order_id, generation_id, bill_to_id, ship_to_id, order_date, status_code, invoice_number, ship_date, required_date, po_number, sales_total, price_total" },
+    { table: "eclipse.sales_order_line_generation", purpose: "Order-line generation, quantity, price, and product references.", columns: "sales_order_line_generation_id, sales_order_line_id, sales_order_id, generation_id, line_id, product_id, ship_qty, stock_qty, nonstock_qty, price, original_price, tax_amount" }
   ];
 
   async function loadDashboard() {
@@ -156,11 +125,9 @@
       document.querySelector("#schema-state").textContent = data.schemaInitialized ? "Initialized" : "Not initialized";
       document.querySelector("#schema-state").className = data.schemaInitialized ? "metric success" : "metric muted";
       document.querySelector("#db-size").textContent = `${(data.databaseSizeBytes / 1024 / 1024).toFixed(1)} MB`;
-      const visibleCounts = Object.entries(data.tableCounts)
-        .filter(([table]) => table.toLowerCase() !== "query_history");
+      const visibleCounts = Object.entries(data.tableCounts);
       const values = visibleCounts.map(([, count]) => count);
       document.querySelector("#total-rows").textContent = values.reduce((sum, n) => sum + n, 0).toLocaleString();
-      document.querySelector("#last-benchmark").textContent = data.lastBenchmarkExecution ? new Date(data.lastBenchmarkExecution).toLocaleString() : "None";
       document.querySelector("#counts").innerHTML = `<p class="muted">${escapeHtml(data.statusMessage)}</p>` +
         tableHtml(visibleCounts.map(([table, count]) => ({ table, count: count.toLocaleString() })));
     } catch (error) {
@@ -246,28 +213,6 @@
   }
 
   if (activePage === "dashboard") loadDashboard();
-  if (activePage === "setup") {
-    async function runSetup(script) {
-      const button = document.querySelector(`#${script}-button`);
-      const state = document.querySelector("#setup-state");
-      button.disabled = true;
-      state.textContent = `Running ${script}.sql… Large seed data generation may take several minutes.`;
-      document.querySelector("#setup-log").textContent = `Started ${script}.sql at ${new Date().toLocaleString()}`;
-      try {
-        const { data } = await api(`/api/setup/${script}`, { method: "POST" });
-        state.textContent = `${data.message} At ${new Date(data.executedAt).toLocaleString()} (${data.durationMilliseconds.toLocaleString()} ms).`;
-        state.className = "success";
-        document.querySelector("#setup-counts").innerHTML = tableHtml(Object.entries(data.rowCounts).map(([table, count]) => ({ table, inserted: count.toLocaleString() })));
-        document.querySelector("#setup-log").textContent = asJson(data);
-      } catch (error) {
-        state.textContent = "Setup failed.";
-        state.className = "error";
-        document.querySelector("#setup-log").textContent = error.message;
-      } finally { button.disabled = false; }
-    }
-    document.querySelector("#schema-button").addEventListener("click", () => runSetup("schema"));
-    document.querySelector("#seed-button").addEventListener("click", () => runSetup("seed"));
-  }
   if (activePage === "query") {
     document.querySelector("#execute-query").addEventListener("click", () =>
       executeQuery().catch(error => {
@@ -308,52 +253,6 @@
       document.querySelector("#page-size").value = step;
       document.querySelector("#page-skip").value = Math.max(0, skip - step);
       document.querySelector("#execute-query").click();
-    });
-  }
-  if (activePage === "performance") {
-    async function refreshPerformance() {
-      const { data } = await api("/api/performance/benchmarks");
-      const fastest = data.length ? data.reduce((best, item) => item.minimumMilliseconds < best.minimumMilliseconds ? item : best) : null;
-      const slowest = data.length ? data.reduce((worst, item) => item.maximumMilliseconds > worst.maximumMilliseconds ? item : worst) : null;
-      const average = data.length ? data.reduce((sum, item) => sum + item.averageMilliseconds, 0) / data.length : 0;
-      const successes = data.reduce((sum, item) => sum + item.successCount, 0);
-      const failures = data.reduce((sum, item) => sum + item.failureCount, 0);
-      document.querySelector("#benchmark-overview").innerHTML = [
-        ["Fastest", fastest ? `${fastest.minimumMilliseconds.toFixed(1)} ms · ${fastest.scenario}` : "—"],
-        ["Slowest", slowest ? `${slowest.maximumMilliseconds.toFixed(1)} ms · ${slowest.scenario}` : "—"],
-        ["Average scenario time", `${average.toFixed(1)} ms`],
-        ["Success / failure", `${successes} / ${failures}`]
-      ].map(([label, value]) => `<div class="card"><div class="muted">${escapeHtml(label)}</div><div class="metric">${escapeHtml(value)}</div></div>`).join("");
-      document.querySelector("#benchmark-history").innerHTML = tableHtml(data.map(item => ({
-        scenario: item.scenario, executed: new Date(item.executedAt).toLocaleString(),
-        minMs: item.minimumMilliseconds.toFixed(1), maxMs: item.maximumMilliseconds.toFixed(1),
-        averageMs: item.averageMilliseconds.toFixed(1), medianMs: item.medianMilliseconds.toFixed(1),
-        success: item.successCount, failures: item.failureCount, payloadBytes: item.payloadBytes.toLocaleString(),
-        datasetSize: item.datasetSize.toLocaleString(), httpStatuses: item.statusCodesJson
-      })));
-      const { data: indexes } = await api("/api/performance/index-summary");
-      document.querySelector("#index-summary").innerHTML = tableHtml(indexes.map(({ table, indexName, definition }) => ({ table, indexName, definition })));
-    }
-    refreshPerformance().catch(error => document.querySelector("#benchmark-history").textContent = error.message);
-    document.querySelector("#run-benchmarks").addEventListener("click", async event => {
-      const button = event.currentTarget;
-      button.disabled = true;
-      document.querySelector("#benchmark-state").textContent = "Benchmark suite is running; this can take a while.";
-      try {
-        const { data } = await api("/api/performance/benchmarks", { method: "POST" });
-        const rows = data.scenarios.map(item => ({
-          scenario: item.scenario, minMs: item.minimumMilliseconds.toFixed(1),
-          maxMs: item.maximumMilliseconds.toFixed(1), averageMs: item.averageMilliseconds.toFixed(1),
-          medianMs: item.medianMilliseconds.toFixed(1), success: item.successCount,
-          failures: item.failureCount, bytes: item.payloadBytes.toLocaleString(),
-          httpStatuses: item.statusCodes.join(", ")
-        }));
-        document.querySelector("#benchmark-overview").innerHTML = `<div class="card">Dataset rows<div class="metric">${data.datasetSize.toLocaleString()}</div></div>`;
-        document.querySelector("#benchmark-history").innerHTML = tableHtml(rows);
-        document.querySelector("#benchmark-state").textContent = `Completed ${data.scenarios.length} scenarios, five runs each.`;
-        await refreshPerformance();
-      } catch (error) { document.querySelector("#benchmark-state").textContent = error.message; }
-      finally { button.disabled = false; }
     });
   }
 })();
