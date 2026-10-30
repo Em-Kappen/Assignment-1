@@ -74,5 +74,9 @@
   {
     "description": "Count customers without returning customer records",
     "url": "https://localhost:7046/odata/Customers?$count=true&$select=CustomerId&$top=0"
+  },
+  {
+    "description": "Run the performance benchmark for the APIs",
+    "url": "https://localhost:7076/benchmark-tests"
   }
 ]
