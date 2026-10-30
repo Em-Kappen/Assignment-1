@@ -71,3 +71,18 @@ The SQL Server connection is read from
 database and keep credentials in a secret store/environment configuration.
 Startup does not create tables, run migrations, or seed data. No synthetic
 records are added to the existing database.
+
+## Local API benchmark
+
+Call `GET /benchmark-tests` while the Development app is running. This bounded,
+read-only endpoint tests projected Customers and Products, Orders with nested
+OrderItems and Products, customer order history, and OrderItems. It reports
+per-scenario status counts, throughput, response payload bytes, and minimum,
+mean, median, p95, and maximum latency. Each scenario runs 10 requests, with at
+most four scenarios concurrently.
+
+The target origin defaults to `https://localhost:7046` and can be overridden
+with `BenchmarkTests__BaseUrl`. The configured target is restricted to an
+HTTP(S) localhost or loopback origin with no path. This avoids accepting
+arbitrary target URLs. Benchmark development data only, not production
+services.

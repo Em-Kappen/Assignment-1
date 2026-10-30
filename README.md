@@ -76,3 +76,21 @@ because they are not part of the mapped schema.
 Employee, branch, benchmark, and query-history datasets are not part of this
 SQL_main OData integration. The setup and seed endpoints explicitly report
 that schema changes and synthetic data are disabled.
+
+## Local API benchmark
+
+Start the application, then call
+[`GET https://localhost:7046/benchmark-tests`](src/company_mgmt/company_mgmt.http).
+The endpoint runs a bounded, read-only suite against the local OData customer,
+product, order, and order-item APIs. It reports per-scenario HTTP status counts,
+request throughput, response payload size, and minimum, mean, median, p95, and
+maximum response latency. The suite runs 10 requests per scenario with at most
+four scenarios concurrently.
+
+The target origin defaults to `https://localhost:7046`. To test the same
+application on a different local port, configure
+`BenchmarkTests__BaseUrl`, for example
+`$env:BenchmarkTests__BaseUrl='http://127.0.0.1:5098'` before `dotnet run`.
+Only localhost and loopback origins are accepted; arbitrary external targets
+are intentionally not allowed. Run the suite against development data, not a
+production service.

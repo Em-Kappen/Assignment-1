@@ -62,17 +62,8 @@
   <section id="query" class="page hidden">
     <h2>OData query runner</h2>
     <div class="card">
-      <label for="entity">Entity set</label>
-      <select id="entity">
-        <option>Customers</option><option>Products</option><option>Orders</option><option>OrderItems</option>
-      </select>
-      <label for="query-text">OData query options (example: $select=ProductId,Description&amp;$top=100)</label>
-      <textarea id="query-text" spellcheck="false">$top=100</textarea>
-      <div class="grid">
-        <div><label for="page-size">Page size ($top)</label><input id="page-size" type="number" min="1" max="10000" placeholder="Use query value"></div>
-        <div><label for="page-skip">Rows to skip ($skip)</label><input id="page-skip" type="number" min="0" placeholder="0"></div>
-        <div><label for="sort-order">Sort ($orderby)</label><input id="sort-order" placeholder="ProductId"></div>
-      </div>
+      <label for="query-text">OData path or query options (example: /odata/Products?$select=ProductId,Description&amp;$top=100)</label>
+      <textarea id="query-text" spellcheck="false">/odata/Products?$select=ProductId,Description,CatalogNumber,ProductStatusId&amp;$top=100</textarea>
       <div class="toolbar">
         <button id="execute-query">Execute query</button>
         <button id="previous-page" class="secondary">Previous page</button>
@@ -163,13 +154,19 @@
   }
 
   const savedQuery = { json: "", url: "" };
-  async function executeQuery() {
-    const options = document.querySelector("#query-text").value.trim();
-    const entity = document.querySelector("#entity").value;
-    const path = options.startsWith("/odata/") ? options : `/odata/${entity}${options ? (options.startsWith("?") ? options : `?${options}`) : ""}`;
+  function queryUrlFromText(value) {
+    const request = value.trim();
+    const path = request.startsWith("/odata/")
+      ? request
+      : `/odata/Products${request ? (request.startsWith("?") ? request : `?${request}`) : ""}`;
     const url = new URL(path, location.origin);
     if (url.origin !== location.origin || !url.pathname.startsWith("/odata/"))
       throw new Error("Enter OData options or an /odata/... path on this application.");
+    return url;
+  }
+
+  async function executeQuery() {
+    const url = queryUrlFromText(document.querySelector("#query-text").value);
     for (const [key, value] of [...url.searchParams.entries()]) {
       if (!key.startsWith("%24")) continue;
       const decodedKey = decodeURIComponent(key);
@@ -178,12 +175,6 @@
         url.searchParams.set(decodedKey, value);
       }
     }
-    const pageSize = document.querySelector("#page-size").value;
-    const skip = document.querySelector("#page-skip").value;
-    const orderBy = document.querySelector("#sort-order").value.trim();
-    if (pageSize) url.searchParams.set("$top", pageSize);
-    if (skip) url.searchParams.set("$skip", skip);
-    if (orderBy) url.searchParams.set("$orderby", orderBy);
     document.querySelector("#request-preview").textContent = `Request URL: ${url.pathname}${url.search}`;
     document.querySelector("#query-error").textContent = "";
     document.querySelector("#query-metrics").textContent = "Executing…";
@@ -238,21 +229,28 @@
       link.click();
       URL.revokeObjectURL(link.href);
     });
-    document.querySelector("#next-page").addEventListener("click", () => {
-    const current = new URLSearchParams(document.querySelector("#query-text").value.replace(/^\?/, ""));
-    const step = Number(document.querySelector("#page-size").value || current.get("$top") || 100);
-    const skip = Number(document.querySelector("#page-skip").value || current.get("$skip") || 0);
-      document.querySelector("#page-size").value = step;
-      document.querySelector("#page-skip").value = skip + step;
+    function changePage(direction) {
+      const url = queryUrlFromText(document.querySelector("#query-text").value);
+      const pageSize = Number(url.searchParams.get("$top") || 100);
+      const skip = Number(url.searchParams.get("$skip") || 0);
+      if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 10000)
+        throw new Error("$top must be an integer between 1 and 10000 to use paging.");
+      if (!Number.isInteger(skip) || skip < 0)
+        throw new Error("$skip must be a non-negative integer to use paging.");
+      url.searchParams.set("$top", String(pageSize));
+      url.searchParams.set("$skip", String(Math.max(0, skip + direction * pageSize)));
+      document.querySelector("#query-text").value = `${url.pathname}${url.search}`;
       document.querySelector("#execute-query").click();
+    }
+    document.querySelector("#next-page").addEventListener("click", () => {
+      try { changePage(1); } catch (error) {
+        document.querySelector("#query-error").textContent = error.message;
+      }
     });
     document.querySelector("#previous-page").addEventListener("click", () => {
-      const current = new URLSearchParams(document.querySelector("#query-text").value.replace(/^\?/, ""));
-      const step = Number(document.querySelector("#page-size").value || current.get("$top") || 100);
-      const skip = Number(document.querySelector("#page-skip").value || current.get("$skip") || 0);
-      document.querySelector("#page-size").value = step;
-      document.querySelector("#page-skip").value = Math.max(0, skip - step);
-      document.querySelector("#execute-query").click();
+      try { changePage(-1); } catch (error) {
+        document.querySelector("#query-error").textContent = error.message;
+      }
     });
   }
 })();

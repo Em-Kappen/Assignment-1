@@ -8,12 +8,19 @@ using Microsoft.OData.ModelBuilder;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = BuildConnectionString(builder.Configuration);
+var benchmarkBaseAddress = BuildBenchmarkBaseAddress(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString, sqlServer => sqlServer.CommandTimeout(1800))
         .EnableDetailedErrors()
         .LogTo(Console.WriteLine, LogLevel.Information));
 builder.Services.AddScoped<IDatabaseSetupService, DatabaseSetupService>();
+builder.Services.AddScoped<IApiBenchmarkService, ApiBenchmarkService>();
+builder.Services.AddHttpClient("BenchmarkTarget", client =>
+{
+    client.BaseAddress = benchmarkBaseAddress;
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler(options => { });
 builder.Services.AddOpenApi();
@@ -80,4 +87,22 @@ static string BuildConnectionString(ConfigurationManager configuration)
     return configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException(
             "ConnectionStrings:DefaultConnection must be configured before starting the application.");
+}
+
+static Uri BuildBenchmarkBaseAddress(ConfigurationManager configuration)
+{
+    var configuredAddress = configuration["BenchmarkTests:BaseUrl"] ?? "https://localhost:7046/";
+    if (!Uri.TryCreate(configuredAddress, UriKind.Absolute, out var address)
+        || address.Scheme is not ("http" or "https")
+        || !address.IsLoopback
+        || !string.IsNullOrEmpty(address.UserInfo)
+        || address.AbsolutePath is not ("" or "/")
+        || !string.IsNullOrEmpty(address.Query)
+        || !string.IsNullOrEmpty(address.Fragment))
+    {
+        throw new InvalidOperationException(
+            "BenchmarkTests:BaseUrl must be an HTTP(S) localhost or loopback origin without a path, credentials, query, or fragment.");
+    }
+
+    return new Uri(address.GetLeftPart(UriPartial.Authority) + "/", UriKind.Absolute);
 }

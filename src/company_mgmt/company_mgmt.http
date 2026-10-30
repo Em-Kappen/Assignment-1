@@ -1,6 +1,5 @@
 @company_mgmt_HostAddress = https://localhost:7046
 
-GET {{company_mgmt_HostAddress}}/weatherforecast/
+### Run the bounded OData API benchmark suite
+GET {{company_mgmt_HostAddress}}/benchmark-tests
 Accept: application/json
-
-###
